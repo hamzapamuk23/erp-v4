@@ -21,9 +21,7 @@ class TestDatabaseLocaleTests {
                                datlocale
                           from pg_database
                          where datname = current_database()
-                        """)
-                .query()
-                .singleRow();
+                        """).query().singleRow();
         assertThat(row)
                 .containsEntry("encoding", "UTF8")
                 .containsEntry("provider", "b")

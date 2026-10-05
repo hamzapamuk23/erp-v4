@@ -1,0 +1,8 @@
+{
+  "shell": {
+    "title": "ERP",
+    "version": "Sürüm",
+    "backendUnavailable": "Sunucuya ulaşılamıyor. Lütfen biraz sonra tekrar deneyin.",
+    "welcome": "Hoş geldiniz"
+  }
+}

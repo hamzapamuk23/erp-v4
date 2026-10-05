@@ -1,0 +1,28 @@
+{
+  "name": "@erp/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@erp/core": "workspace:*",
+    "@erp/shell": "workspace:*",
+    "@erp/ui": "workspace:*",
+    "@tanstack/vue-query": "catalog:",
+    "vue": "catalog:",
+    "vue-i18n": "catalog:",
+    "vuetify": "catalog:"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-vuetify": "catalog:",
+    "vue-tsc": "catalog:"
+  }
+}

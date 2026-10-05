@@ -1,0 +1,25 @@
+{
+  "name": "erp-web",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.9.1",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "test": "node --test \"scripts/*.test.mjs\" && pnpm -r --filter \"!@erp/e2e\" test",
+    "build": "pnpm --filter @erp/web build",
+    "licenses:check": "node scripts/check-licenses.mjs"
+  },
+  "devDependencies": {
+    "@vue/eslint-config-prettier": "catalog:",
+    "@vue/eslint-config-typescript": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-vue": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vue-tsc": "catalog:"
+  }
+}

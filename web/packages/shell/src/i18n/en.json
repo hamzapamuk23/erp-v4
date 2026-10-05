@@ -1,0 +1,8 @@
+{
+  "shell": {
+    "title": "ERP",
+    "version": "Version",
+    "backendUnavailable": "The server cannot be reached. Please try again shortly.",
+    "welcome": "Welcome"
+  }
+}

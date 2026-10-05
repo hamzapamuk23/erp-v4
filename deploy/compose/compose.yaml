@@ -1,0 +1,90 @@
+# Profiles (doc §11, §12.3):
+#   (none) postgres only
+#   dev    + keycloak, mailpit       → the app runs from the IDE / ./mvnw with the `dev` profile
+#   ci     + app (single image)      → walking skeleton, used by smoke.sh
+#   e2e    + Playwright runner       → used by smoke.sh only
+# Secrets come from deploy/compose/.env (run init-env.sh first).
+name: erp
+
+services:
+  postgres:
+    image: erp-postgres:local
+    build:
+      context: ./postgres
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run deploy/compose/init-env.sh first}
+      # Default collation C.UTF-8 via the builtin provider; Turkish sorting is per column/query (doc §7.8).
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale-provider=builtin --builtin-locale=C.UTF-8
+      ERP_PLATFORM_DB_PASSWORD: ${ERP_PLATFORM_DB_PASSWORD:?run deploy/compose/init-env.sh first}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?run deploy/compose/init-env.sh first}
+    volumes:
+      # PostgreSQL 18 images keep PGDATA under /var/lib/postgresql/18/docker; mount the parent.
+      - postgres-data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      # TCP check: the temporary init-time server listens on the socket only, so this turns
+      # healthy only after init scripts have finished.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d erp_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0
+    profiles: [dev]
+    command: ["start-dev", "--http-port=8180"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?run deploy/compose/init-env.sh first}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?run deploy/compose/init-env.sh first}
+    ports:
+      - "127.0.0.1:8180:8180"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    profiles: [dev]
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
+  app:
+    image: ${ERP_APP_IMAGE:-erp-app:local}
+    profiles: [ci]
+    build:
+      context: ../..
+      dockerfile: deploy/docker/app.Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/erp_platform
+      SPRING_DATASOURCE_USERNAME: erp_platform
+      SPRING_DATASOURCE_PASSWORD: ${ERP_PLATFORM_DB_PASSWORD:?run deploy/compose/init-env.sh first}
+      ERP_DEPLOYMENT_MODE: onprem
+    networks:
+      default:
+        # Chromium force-upgrades the "app" TLD to https (HSTS preload), so the e2e runner reaches the service as "erp-app".
+        aliases: [erp-app]
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  e2e:
+    profiles: [e2e]
+    build:
+      context: ../..
+      dockerfile: deploy/docker/e2e.Dockerfile
+    environment:
+      E2E_BASE_URL: http://erp-app:8080
+    shm_size: 1gb
+    depends_on:
+      - app
+
+volumes:
+  postgres-data:

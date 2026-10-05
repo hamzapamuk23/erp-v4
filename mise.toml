@@ -1,0 +1,7 @@
+# Pinned developer toolchain (docs/architecture/v4-platform.md §12).
+# `mise install` installs everything below. Maven comes from ./mvnw, Docker from Docker Desktop.
+[tools]
+java = "temurin-25"
+node = "24.21.0"
+pnpm = "12.9.1"
+gitleaks = "8.30.1"

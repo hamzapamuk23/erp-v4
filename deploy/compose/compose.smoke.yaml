@@ -1,0 +1,6 @@
+# Overrides used only by smoke.sh: publish no host ports, so the smoke stack can run next to the dev stack.
+services:
+  postgres:
+    ports: !reset []
+  app:
+    ports: !reset []

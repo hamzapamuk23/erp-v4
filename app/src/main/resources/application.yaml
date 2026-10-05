@@ -1,0 +1,31 @@
+# The platform DB password is never stored here (K9). It arrives as SPRING_DATASOURCE_PASSWORD
+# (compose, CI) or from deploy/compose/.env via the `dev` profile.
+spring:
+  application:
+    name: erp
+  datasource:
+    url: jdbc:postgresql://localhost:5432/erp_platform
+    username: erp_platform
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+
+erp:
+  deployment:
+    mode: onprem

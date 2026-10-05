@@ -5,7 +5,7 @@
 | **Doküman** | v4 platform çekirdeği: mimari, teknoloji, yol haritası, "çekirdek tamam" tanımı |
 | **Sürüm** | 1.1 (taslak). İki bağımsız inceleme (mimari; ERP alanı ve mevzuat) sonrası revize edildi. |
 | **Tarih** | 2026-10-05 |
-| **Durum** | İnceleme bekliyor. Kod yazımı bu doküman onaylanana kadar başlamaz. |
+| **Durum** | Onaylandı (2026-10-05). Faz 0 başladı. |
 | **Okuyucu** | Ürün sahibi ve v4'ü geliştirecek ekip (Java/Spring ve Vue bilen, v1'i tanıyan geliştiriciler) |
 | **Dayanak** | v1 (spring-services, smartiys-client ve çevre uygulamalar), v2 ve v3 kod incelemesi; Ekim 2026 itibarıyla teknoloji, lisans ve mevzuat araştırması (kaynaklar Ek B'de) |
 

@@ -63,6 +63,15 @@ class JobsConfiguration {
             public boolean isRunning() {
                 return running;
             }
+
+            /**
+             * A db-scheduler Scheduler cannot start again after stop(). Spring 7 pauses (stops) cached test contexts on
+             * a context switch and restarts them when they are used again, which would fail here.
+             */
+            @Override
+            public boolean isPauseable() {
+                return false;
+            }
         };
     }
 

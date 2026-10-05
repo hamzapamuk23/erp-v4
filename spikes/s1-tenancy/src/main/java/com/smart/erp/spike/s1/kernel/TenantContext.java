@@ -36,13 +36,15 @@ public final class TenantContext {
     }
 
     /**
-     * Runs {@code action} with {@code tenant} bound. While a transaction is active only the tenant that is already bound
-     * may be re-entered: the transaction's connection was taken for that tenant (doc §4.4 rule 7).
+     * Runs {@code action} with {@code tenant} bound. Inside a transaction, or any transaction-synchronized scope
+     * (PROPAGATION_SUPPORTS, NOT_SUPPORTED, NEVER: no actual transaction, but Spring keeps the first connection bound for
+     * the scope), only the tenant that is already bound may be re-entered: the bound connection belongs to that tenant and
+     * JDBC, jOOQ and Modulith would keep using it (doc §4.4 rule 7).
      */
     public static <T> T call(TenantKey tenant, Supplier<T> action) {
         Objects.requireNonNull(tenant, "tenant");
         TenantKey previous = CURRENT.get();
-        if (TransactionSynchronizationManager.isActualTransactionActive() && !tenant.equals(previous)) {
+        if (inTransactionScope() && !tenant.equals(previous)) {
             throw new TenantSwitchInTransactionException(previous, tenant);
         }
         CURRENT.set(tenant);
@@ -55,5 +57,10 @@ public final class TenantContext {
                 CURRENT.set(previous);
             }
         }
+    }
+
+    private static boolean inTransactionScope() {
+        return TransactionSynchronizationManager.isActualTransactionActive()
+                || TransactionSynchronizationManager.isSynchronizationActive();
     }
 }

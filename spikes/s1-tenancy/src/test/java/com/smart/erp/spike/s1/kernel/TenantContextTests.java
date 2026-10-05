@@ -73,6 +73,25 @@ class TenantContextTests {
                 .hasMessageContaining("before the transaction starts"));
     }
 
+    @Test
+    void switchingTenantInsideASynchronizationOnlyScopeIsRejected() {
+        // PROPAGATION_SUPPORTS / NOT_SUPPORTED: no actual transaction, but connections stay bound for the scope.
+        TenantContext.run(
+                ACME,
+                () -> inSynchronizationScope(() -> assertThatThrownBy(() -> TenantContext.run(GLOBEX, () -> {}))
+                        .isInstanceOf(TenantSwitchInTransactionException.class)));
+    }
+
+    /** Opens transaction synchronization without an actual transaction, as Spring does for PROPAGATION_SUPPORTS. */
+    private static void inSynchronizationScope(Runnable action) {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            action.run();
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
     /** Marks a transaction active the way Spring's transaction managers do, without a database. */
     private static void inTransaction(Runnable action) {
         TransactionSynchronizationManager.setActualTransactionActive(true);

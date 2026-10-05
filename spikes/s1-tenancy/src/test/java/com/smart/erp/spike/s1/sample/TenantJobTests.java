@@ -15,8 +15,10 @@ import com.smart.erp.spike.s1.kernel.TenantContext;
 import com.smart.erp.spike.s1.kernel.UuidV7;
 import com.smart.erp.spike.s1.support.SpikeTest;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,6 +68,34 @@ class TenantJobTests {
         }
     }
 
+    /**
+     * The event-id deduplication only lasts while the job row exists: a one-time task's row is removed on completion,
+     * so a redelivery after that (doc §4.4: lost completion record, then republish) schedules and runs the job again.
+     * Idempotent jobs are the actual guarantee (ADR-0014 "İşler idempotent yazılır").
+     */
+    @Test
+    void aRedeliveryAfterTheJobCompletedRunsItAgainSoJobsMustBeIdempotent() {
+        UUID sampleId = TenantContext.call(ACME, () -> samples.record("redelivered-" + UUID.randomUUID()));
+        await().untilAsserted(() -> assertThat(TenantContext.call(ACME, () -> queries.processedAt(sampleId)))
+                .isPresent());
+        Instant firstRun =
+                TenantContext.call(ACME, () -> queries.processedAt(sampleId)).orElseThrow();
+        String eventId = UuidV7.next().toString();
+        ProcessSampleData data = new ProcessSampleData(ACME.value(), sampleId);
+
+        assertThat(scheduler.scheduleIfNotExists(processSample.instance(eventId, data), Instant.now()))
+                .isTrue();
+        await().untilAsserted(() ->
+                assertThat(scheduledRows(eventId)).as("completed and removed").isZero());
+        assertThat(scheduler.scheduleIfNotExists(processSample.instance(eventId, data), Instant.now()))
+                .as("same event id, but the row is gone")
+                .isTrue();
+        await().untilAsserted(() -> assertThat(scheduledRows(eventId)).isZero());
+
+        assertThat(TenantContext.call(ACME, () -> queries.processedAt(sampleId)))
+                .contains(firstRun);
+    }
+
     @Test
     void taskDataIsJsonThatNamesTheTenant() {
         String eventId = UuidV7.next().toString();
@@ -99,6 +129,19 @@ class TenantJobTests {
                             .query(Integer.class)
                             .optional())
                     .hasValue(1));
+            Map<String, Object> row = platformDatabase()
+                    .sql("select last_failure, execution_time from scheduled_tasks"
+                            + " where task_name = ? and task_instance = ?")
+                    .param(SampleJobs.PROCESS_SAMPLE)
+                    .param(eventId)
+                    .query()
+                    .singleRow();
+            assertThat(row.get("last_failure")).as("the failure is recorded").isNotNull();
+            // OneTimeTask's default failure handler retries five minutes later (db-scheduler 16.12.0).
+            assertThat(((Timestamp) row.get("execution_time")).toInstant())
+                    .isBetween(
+                            Instant.now().plus(Duration.ofMinutes(4)),
+                            Instant.now().plus(Duration.ofMinutes(6)));
         } finally {
             scheduler.cancel(TaskInstanceId.of(SampleJobs.PROCESS_SAMPLE, eventId));
         }

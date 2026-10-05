@@ -64,11 +64,26 @@ services:
       SPRING_DATASOURCE_USERNAME: erp_platform
       SPRING_DATASOURCE_PASSWORD: ${ERP_PLATFORM_DB_PASSWORD:?run deploy/compose/init-env.sh first}
       ERP_DEPLOYMENT_MODE: onprem
+    networks:
+      default:
+        # Chromium force-upgrades the "app" TLD to https (HSTS preload), so the e2e runner reaches the service as "erp-app".
+        aliases: [erp-app]
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
+
+  e2e:
+    profiles: [e2e]
+    build:
+      context: ../..
+      dockerfile: deploy/docker/e2e.Dockerfile
+    environment:
+      E2E_BASE_URL: http://erp-app:8080
+    shm_size: 1gb
+    depends_on:
+      - app
 
 volumes:
   postgres-data:

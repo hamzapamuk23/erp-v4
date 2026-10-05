@@ -1,0 +1,14 @@
+.git
+**/node_modules
+**/dist
+**/target
+**/coverage
+**/.DS_Store
+.m2
+.pnpm-store
+docs
+deploy/compose/.env
+deploy/compose/smoke-logs
+web/e2e/playwright-report
+web/e2e/test-results
+web/e2e/reports

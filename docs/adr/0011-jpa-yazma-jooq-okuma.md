@@ -34,3 +34,5 @@ Yazma tarafı entity, optimistic lock ve Envers geçmişi ister (§6.1, §6.9). 
 ## Doğrulama
 
 S1 spike'ı: routing DataSource üzerinde Hibernate 7 + jOOQ, jOOQ okumadan önce `flush` (§15.3, §4.5). S3 spike'ı: jOOQ liste sorgusu. Teyit listesi: jOOQ ticari lisans kararı (kullanıcı kararı, §20 soru 13).
+
+**S1 sonucu (2026-10-05, `dafa8dc`), yazma/okuma ayrımı kısmı doğrulandı:** Hibernate 7.4.5 ve jOOQ 3.21.7 aynı routing DataSource üzerinde, aynı transaction'da çalışıyor. jOOQ diyalekti `spring.jooq.sql-dialect=POSTGRES` ile verilmeli (yoksa Boot açılışta bağlantı ister). Flush kuralının tuzağı gerçek; spike, jOOQ `ExecuteListener`'ı ile otomatik flush'ı doğruladı ve Faz 1 kernel'i için öneriyor ([bulgu B13](../spikes/s1-tenancy.md)). Kalan: ticari jOOQ lisansı kararı (plan 0E).

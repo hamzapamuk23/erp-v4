@@ -24,7 +24,7 @@ Kararların gerekçesi; süreç: [CONTRIBUTING.md](../../CONTRIBUTING.md). Karar
 |---|---|---|---|
 | [ADR-0001](0001-moduler-monolit.md) | Modüler monolit (Spring Modulith), mikroservis yok | Önerildi | Pahalı |
 | [ADR-0002](0002-tek-imaj-saas-onprem.md) | Tek imaj ve tek kod tabanı: SaaS + on-prem | Önerildi | Tek yön |
-| [ADR-0003](0003-tenant-basina-veritabani.md) | Tenant başına veritabanı | Önerildi | Tek yön |
+| [ADR-0003](0003-tenant-basina-veritabani.md) | Tenant başına veritabanı | Kabul edildi | Tek yön |
 | [ADR-0004](0004-platform-veritabani.md) | Platform DB ayrımı | Önerildi | Pahalı |
 | [ADR-0005](0005-keycloak-organizations.md) | Keycloak 26.8, tek iş realm'i + Organizations | Önerildi | Pahalı |
 | [ADR-0006](0006-bff-oturum-cerezi.md) | BFF + `__Host-` oturum çerezi; tarayıcıda token yok | Önerildi | Pahalı |
@@ -33,10 +33,10 @@ Kararların gerekçesi; süreç: [CONTRIBUTING.md](../../CONTRIBUTING.md). Karar
 | [ADR-0009](0009-moduller-arasi-fk-ve-viewlar.md) | Modüller arası FK ve yayınlanmış view kuralları | Önerildi | Pahalı |
 | [ADR-0010](0010-sema-kapsami-ve-modul-durumlari.md) | Şema kapsamı ve modül durumları | Önerildi | Pahalı |
 | [ADR-0011](0011-jpa-yazma-jooq-okuma.md) | Yazma JPA/Hibernate, okuma jOOQ; ticari jOOQ lisansı | Önerildi | Pahalı |
-| [ADR-0012](0012-olay-kaydi-tenant-db.md) | Olay kaydı tenant DB'sinde; tenant dolaşan yeniden yayın | Önerildi | Pahalı |
-| [ADR-0013](0013-uuidv7.md) | Teknik kimlik UUIDv7, uygulama tarafında üretilir | Önerildi | Pahalı |
-| [ADR-0014](0014-db-scheduler.md) | db-scheduler platform DB'sinde; tenant başına iş örnekleri | Önerildi | Pahalı |
-| [ADR-0015](0015-routing-datasource.md) | Routing DataSource; Hibernate multi-tenancy SPI'ı ve L2 cache yok | Önerildi | Pahalı |
+| [ADR-0012](0012-olay-kaydi-tenant-db.md) | Olay kaydı tenant DB'sinde; tenant dolaşan yeniden yayın | Kabul edildi | Pahalı |
+| [ADR-0013](0013-uuidv7.md) | Teknik kimlik UUIDv7, uygulama tarafında üretilir | Kabul edildi | Pahalı |
+| [ADR-0014](0014-db-scheduler.md) | db-scheduler platform DB'sinde; tenant başına iş örnekleri | Kabul edildi | Pahalı |
+| [ADR-0015](0015-routing-datasource.md) | Routing DataSource; Hibernate multi-tenancy SPI'ı ve L2 cache yok | Kabul edildi | Pahalı |
 | [ADR-0016](0016-redis-yok-listen-notify.md) | Redis yok; LISTEN/NOTIFY + TTL ve sürüm kontrolü | Önerildi | Kolay |
 | [ADR-0017](0017-arama-pg-trgm.md) | Arama: `search_text` + `pg_trgm` | Önerildi | Kolay |
 | [ADR-0018](0018-belge-durum-eksenleri.md) | Belge durum eksenleri ve üç düzeltme deseni | Önerildi | Pahalı |

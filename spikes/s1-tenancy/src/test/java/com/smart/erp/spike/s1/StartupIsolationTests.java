@@ -1,5 +1,6 @@
 package com.smart.erp.spike.s1;
 
+import static com.smart.erp.spike.s1.support.SpikeAssertions.assertRootCause;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.smart.erp.spike.s1.support.SpikeContexts;
@@ -29,5 +30,17 @@ class StartupIsolationTests {
         assertThat(routing.rejectedWithoutTenant())
                 .as("tenant-less connection requests during shutdown")
                 .isZero();
+    }
+
+    /**
+     * Negative control: with JDBC metadata access allowed, Hibernate 7.4 asks for a connection at start-up, swallows
+     * the refusal and then cannot pick a dialect. This is the trap doc §4.5 names.
+     */
+    @Test
+    void hibernateMetadataAccessWouldNeedATenantAtStartup() {
+        assertRootCause(() -> SpikeContexts.start(
+                                "--spring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=true")
+                        .close())
+                .hasMessageContaining("Unable to determine Dialect without JDBC metadata");
     }
 }

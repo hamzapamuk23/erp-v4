@@ -1,0 +1,30 @@
+# S1 tenancy spike (doc §15.3). Settings marked "start-up" exist because, without them, a framework component asks the
+# routing DataSource for a connection while no tenant is bound (doc §4.4–§4.5); StartupIsolationTests guards them.
+spring:
+  application:
+    name: erp-spike-s1
+  threads:
+    virtual:
+      enabled: true
+  sql:
+    init:
+      mode: never # migrations are a separate step (doc §4.6); the test fixture plays `erpctl migrate`
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-components: always
+      group:
+        readiness:
+          include: readinessState,db
+  health:
+    db:
+      ignore-routing-data-sources: true # start-up + readiness: readiness is the platform DB, never a tenant DB
+
+erp:
+  tenancy:
+    datasource:
+      maximum-pool-size: 4
+      idle-timeout: 5m

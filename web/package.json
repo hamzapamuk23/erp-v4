@@ -8,7 +8,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --parallel typecheck",
-    "test": "pnpm -r --filter \"!@erp/e2e\" test",
+    "test": "node --test \"scripts/*.test.mjs\" && pnpm -r --filter \"!@erp/e2e\" test",
     "build": "pnpm --filter @erp/web build",
     "licenses:check": "node scripts/check-licenses.mjs"
   },

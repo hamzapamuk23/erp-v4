@@ -1,6 +1,7 @@
 // Fails when a production dependency of any workspace package uses a license outside the allowlist
 // (doc §3.1.6, §12.3). New license families need an ADR, not an edit here.
 import { execFileSync } from 'node:child_process'
+import { isAllowedExpression } from './license-expression.mjs'
 
 const ALLOWED = new Set([
   'MIT',
@@ -19,12 +20,9 @@ const report = JSON.parse(
   }),
 )
 
-// SPDX "OR" expressions pass when any alternative is allowed, e.g. "(MIT OR Apache-2.0)".
-const isAllowed = (expression) =>
-  expression
-    .replace(/[()]/g, '')
-    .split(/\s+OR\s+/)
-    .some((id) => ALLOWED.has(id.trim()))
+// SPDX expressions: "(MIT OR Apache-2.0)" passes when any alternative is allowed, an AND expression
+// only when every conjunct is (see license-expression.mjs).
+const isAllowed = (expression) => isAllowedExpression(expression, ALLOWED)
 
 const packages = Object.values(report).flat()
 const violations = Object.entries(report)

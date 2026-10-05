@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.smart.erp.spike.s1.support.SpikeContexts;
 import com.smart.erp.spike.s1.tenancy.TenantRoutingDataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.modulith.events.core.EventPublicationRegistry;
 
 /**
  * The central S1 claim (doc §4.4–§4.5, ADR-0015): no framework component asks the routing DataSource for a tenant
@@ -42,5 +44,15 @@ class StartupIsolationTests {
                                 "--spring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=true")
                         .close())
                 .hasMessageContaining("Unable to determine Dialect without JDBC metadata");
+    }
+
+    @Test
+    void modulithGetsItsDatabaseTypeAndRegistryWithoutAConnection() {
+        try (ConfigurableApplicationContext context = SpikeContexts.start()) {
+            assertThat(context.getBean("databaseType")).hasToString("POSTGRES");
+            assertThat(AopUtils.getTargetClass(context.getBean(EventPublicationRegistry.class))
+                            .getSimpleName())
+                    .isEqualTo("TenantSafeEventPublicationRegistry");
+        }
     }
 }

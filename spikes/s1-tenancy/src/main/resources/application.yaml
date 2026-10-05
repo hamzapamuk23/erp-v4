@@ -20,6 +20,14 @@ spring:
       hibernate.cache.use_second_level_cache: false # ADR-0015
   jooq:
     sql-dialect: POSTGRES # start-up: otherwise Boot connects to detect the dialect
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          enabled: false # start-up: Modulith 2.1.1 runs its DDL when this property is absent (matchIfMissing=true)
+        schema: platform_events
+      republish-outstanding-events-on-restart: false # ADR-0012: the tenant-walking republisher does this (Task 9)
+      completion-mode: delete
 
 management:
   endpoint:

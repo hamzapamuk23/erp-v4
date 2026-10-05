@@ -34,6 +34,12 @@ class TenancyConfiguration {
         return new TenantRoutingDataSource(directory, new TenantDataSourceFactory(properties));
     }
 
+    /** Static: a BeanPostProcessor must exist before the beans it intercepts are created. */
+    @Bean
+    static ModulithTenancySupport modulithTenancySupport() {
+        return new ModulithTenancySupport();
+    }
+
     /** Boot composes every TaskDecorator bean into the application task executor (@Async, Modulith listeners). */
     @Bean
     TenantTaskDecorator tenantTaskDecorator() {

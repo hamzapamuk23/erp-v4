@@ -4,6 +4,7 @@ import com.github.kagkarlsson.scheduler.Scheduler;
 import com.github.kagkarlsson.scheduler.task.Task;
 import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.RecurringTask;
+import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import com.smart.erp.spike.s1.tenancy.PlatformDb;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
 class JobsConfiguration {
+
+    static final String EVENT_REPUBLISHER = "platform.event-republisher";
 
     /** db-scheduler on the platform DB (ADR-0014); the task queue never lives in a tenant DB. */
     @Bean
@@ -61,5 +64,12 @@ class JobsConfiguration {
                 return running;
             }
         };
+    }
+
+    /** A platform job: no tenant in its data, it binds each tenant itself (ADR-0012, ADR-0014). */
+    @Bean
+    RecurringTask<Void> eventRepublisherTask(TenantEventRepublisher republisher, EventRepublishProperties properties) {
+        return Tasks.recurring(EVENT_REPUBLISHER, new DelayedFixedDelay(properties.interval()))
+                .execute((instance, context) -> republisher.republishAll(properties.minAge()));
     }
 }

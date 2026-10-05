@@ -53,3 +53,7 @@ spike:
     polling-interval: 1s
     threads: 4
     shutdown-max-wait: 30s
+  events:
+    republish:
+      interval: 1m
+      min-age: 5m

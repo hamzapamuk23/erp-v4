@@ -12,6 +12,8 @@ public final class SpikeTestProperties {
         Map<String, String> properties = new LinkedHashMap<>(SpikeDatabases.applicationProperties());
         properties.put("erp.tenancy.datasource.connection-timeout", "2s");
         properties.put("spike.jobs.polling-interval", "100ms");
+        // The recurring republisher must not fire during a test run; tests call republishAll directly.
+        properties.put("spike.events.republish.interval", "1h");
         return properties;
     }
 }

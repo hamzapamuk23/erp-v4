@@ -13,6 +13,7 @@
     "licenses:check": "node scripts/check-licenses.mjs"
   },
   "devDependencies": {
+    "@vue/eslint-config-prettier": "catalog:",
     "@vue/eslint-config-typescript": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-vue": "catalog:",

@@ -15,6 +15,7 @@ catalog:
   '@tanstack/vue-query': 5.104.1
   '@types/node': 24.19.1
   '@vitejs/plugin-vue': 6.0.9
+  '@vue/eslint-config-prettier': 10.2.0
   '@vue/eslint-config-typescript': 14.9.0
   '@vue/test-utils': 2.5.1
   eslint: 10.12.0

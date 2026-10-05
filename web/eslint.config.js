@@ -1,3 +1,4 @@
+import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 import pluginVue from 'eslint-plugin-vue'
 import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 
@@ -21,4 +22,5 @@ export default defineConfigWithVueTs(
       'vue/component-api-style': ['error', ['script-setup']],
     },
   },
+  skipFormatting,
 )

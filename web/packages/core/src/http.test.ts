@@ -65,4 +65,11 @@ describe('getJson', () => {
     expect(seen?.credentials).toBe('same-origin')
     expect(new Headers(seen?.headers).get('accept')).toBe('application/json')
   })
+
+  it('reports an ApiError when a 2xx body is not JSON', async () => {
+    const error = await failure(getJson('/x', respond('<html>ok</html>', 200, 'text/html')))
+    expect(error.status).toBe(200)
+    expect(error.problem).toBeUndefined()
+    expect(error.cause).toBeInstanceOf(SyntaxError)
+  })
 })

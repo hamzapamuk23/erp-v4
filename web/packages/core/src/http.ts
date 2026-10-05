@@ -39,7 +39,11 @@ export async function getJson<T>(path: string, fetchFn: FetchFn = browserFetch):
   if (!response.ok) {
     throw new ApiError(response.status, await readProblem(response))
   }
-  return (await response.json()) as T
+  try {
+    return (await response.json()) as T
+  } catch (cause) {
+    throw new ApiError(response.status, undefined, { cause })
+  }
 }
 
 async function readProblem(response: Response): Promise<ProblemDetail | undefined> {

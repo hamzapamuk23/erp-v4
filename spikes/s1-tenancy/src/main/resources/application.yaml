@@ -18,6 +18,8 @@ spring:
       jakarta.persistence.database-product-name: PostgreSQL
       jakarta.persistence.database-major-version: 18
       hibernate.cache.use_second_level_cache: false # ADR-0015
+  jooq:
+    sql-dialect: POSTGRES # start-up: otherwise Boot connects to detect the dialect
 
 management:
   endpoint:

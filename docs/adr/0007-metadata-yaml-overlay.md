@@ -22,7 +22,7 @@ v1'de metadata entity üzerindeydi ve UI'a bağlıydı (`@Metadata/@MetaColumn` 
 ## Sonuçlar
 
 - Olumlu: Temel tanım ve overlay aynı formatta olduğu için birleştirme basit; inceleme ve diff kolay; scaffold YAML üretir, ileride görsel overlay editörü aynı modeli düzenleyebilir.
-- Olumsuz: Java DSL'in tip güvenliği yoktur, doğrulayıcı zorunlu hale gelir. Motorun katılaşma riski vardır (§19 R2); kaçış yolları zorunlu ilkedir (§6.5, §9.5).
+- Olumsuz: YAML, Java DSL'in sağlayacağı tip güvenliğini vermez; doğrulayıcı zorunludur. Motorun katılaşma riski vardır (§19 R2); kaçış yolları zorunlu ilkedir (§6.5, §9.5).
 - Takip: Özel alanlar ADR-0008'de.
 
 ## Değerlendirilen alternatifler

@@ -23,8 +23,12 @@ Tanım: [.gitlab-ci.yml](../../.gitlab-ci.yml). Her iş yerelde aynı komutla ç
 
 | Değişken | Nitelik | Amaç |
 |---|---|---|
-| `COSIGN_PRIVATE_KEY` | protected, masked | İmaj imzalama anahtarı |
+| `COSIGN_PRIVATE_KEY` | protected | İmaj imzalama anahtarı (çok satırlı PEM) |
 | `COSIGN_PASSWORD` | protected, masked | Anahtar parolası |
+
+`COSIGN_PRIVATE_KEY` maskelenemez: GitLab çok satırlı bir PEM değerini maskelemez. Bu yüzden anahtar yalnızca `protected` tutulur: sadece korumalı dallarda ve etiketlerde, yani `image:sign` işinin çalıştığı yerlerde bulunur. Tek satırlı parola maskelenebilir. Anahtar parolayla şifrelidir; yine de pipeline'a bu değişkeni yazdıran bir komut eklenmez.
+
+`smoke:compose`, `image:sign`'ın imzaladığı imajın aynısını sınar: etiketi değil `image:build`'in ürettiği digest'i (`$CI_REGISTRY_IMAGE/app@$APP_IMAGE_DIGEST`) çalıştırır; digest boşsa iş hemen başarısız olur.
 
 Anahtar üretimi (bir kez, yetkili bir kişi tarafından): `cosign generate-key-pair gitlab://<grup>/<proje>`. Bu komut anahtarı doğrudan proje değişkenlerine yazar; açık anahtar (`cosign.pub`) on-prem doğrulama için Faz 7'de imajla birlikte dağıtılır.
 

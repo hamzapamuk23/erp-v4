@@ -9,7 +9,7 @@
 
 ## Bağlam
 
-§12 sürümleri Ekim 2026 itibarıyla verir; kesin yamalar Faz 0'da sabitlenir. Boot 4'e doğrudan başlamak, 3.5'ten başlayıp hemen bir major göç borcuna girmekten iyidir (§12.1). Java 25 LTS'de virtual thread'lerdeki `synchronized` pinning sorunu giderildi (JEP 491). PostgreSQL 18'in desteği Kasım 2030'da biter. Spring Boot 4.x ekosisteminin olgunluğu bir risktir (§19 R9).
+§12 sürümleri Ekim 2026 itibarıyla verir; kesin yamalar Faz 0'da sabitlenir. Boot 4'e doğrudan başlamak, 3.5'ten başlayıp hemen bir major göç borcuna girmekten iyidir (§12.1). Virtual thread'lerdeki `synchronized` pinning sorunu Java 24'te giderildi (JEP 491); Java 25 LTS bunu içerir. PostgreSQL 18'in desteği Kasım 2030'da biter. Spring Boot 4.x ekosisteminin olgunluğu bir risktir (§19 R9).
 
 ## Karar
 

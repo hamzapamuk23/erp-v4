@@ -15,9 +15,9 @@ Kaynak: [v4-platform.md](../architecture/v4-platform.md) §3.2, §5.3, §7, §9,
 | K7 | Her tabloda `@Version`, güncellemede If-Match | Kernel temel sınıfı + ArchUnit | Faz 1 |
 | K8 | Müşteriye özel build/dal/fork yok | Süreç | Süreç |
 | K9 | Repoda sır yok | gitleaks (CI `secrets:gitleaks`), `.gitignore` | **Aktif** |
-| K10 | `toUpperCase()`/`toLowerCase()` parametresiz yasak | Error Prone `StringCaseLocaleUsage` (ERROR) + ArchUnit `NO_LOCALE_LESS_CASE_CONVERSION` | **Aktif** |
+| K10 | `toUpperCase()`/`toLowerCase()` parametresiz yasak (çağrı ve `String::toUpperCase` metot referansı) | Error Prone `StringCaseLocaleUsage` (ERROR) + ArchUnit `NO_LOCALE_LESS_CASE_CONVERSION` | **Aktif** |
 | K11 | Nesneler `==` ile karşılaştırılmaz | Error Prone `ReferenceEquality`, `BoxedPrimitiveEquality` (ERROR) | **Aktif** |
-| K12 | `@Scheduled`/`@EnableScheduling` yasak | ArchUnit `NO_SPRING_SCHEDULING` | **Aktif** |
+| K12 | `@Scheduled`/`@Schedules`/`@EnableScheduling` yasak (bunlarla meta-anotasyonlanmış birleşik anotasyonlar dahil) | ArchUnit `NO_SPRING_SCHEDULING` | **Aktif** |
 | K13 | Liste uç noktaları her zaman sayfalı | ArchUnit + API testleri | Faz 1 |
 | K14 | Entity'ler API'de serileştirilmez | ArchUnit | Faz 1 |
 | K15 | Kişisel veri alanları işaretli, logda yok | Metadata doğrulayıcı, log maskeleme | Faz 4 |

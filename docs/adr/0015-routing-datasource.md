@@ -22,7 +22,7 @@ Tenant başına veritabanı modelinde (ADR-0003) JPA, jOOQ ve Modulith'in hepsi 
 
 ## Sonuçlar
 
-- Olumlu: Tek yönlendirme noktası. Boşta duran tenant'lar bağlantı tutmaz. Tenant'lar arası sequence ve ikinci seviye cache sızıntısı riski yoktur.
+- Olumlu: Tek yönlendirme noktası. Boşta duran tenant'lar bağlantı tutmaz. Tenant'lar arası sequence sızıntısı riski yoktur.
 - Olumsuz: Hibernate'in kendi multi-tenancy desteği ve ikinci seviye cache'i kullanılmaz; tuzaklar koruma kodu ve testle sürekli denetlenmelidir. Tenant başına DB'nin operasyon yükü (§19 R6).
 - Takip: Küme başına bağlantı sayısı kapasite eşiği olarak izlenir (§11.3).
 

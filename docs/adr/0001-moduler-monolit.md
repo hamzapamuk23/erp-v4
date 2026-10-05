@@ -14,7 +14,7 @@ v1'de 25'ten fazla servis aynı PostgreSQL'i paylaşıyor ve birbirinin tablolar
 ## Karar
 
 - Uygulama Spring Modulith ile kurulan bir **modüler monolittir**; tek imajda, N instance olarak çalışır (§5.2). Mikroservis kullanılmaz.
-- Katmanlar: platform → iş modülleri → sektör paketleri → müşteri uzantıları. Bağımlılık her zaman bağımlıdan sağlayıcıya doğrudur; döngü yasaktır (§5.1, §5.4).
+- Katmanlar: müşteri uzantıları → sektör paketleri → iş modülleri → platform. Bağımlılık her zaman bağımlıdan sağlayıcıya doğrudur (sektör paketi → iş modülü → platform); döngü yasaktır (§5.1, §5.4).
 - Her modül hem bir Maven modülü hem bir Spring Modulith uygulama modülüdür. Açık paketler `api` ve `spi`, iç paketler `application`, `domain`, `infra`, `web`'dir (§5.3).
 - Modüller birbirleriyle sadece senkron API, domain olayı, uzatma noktası (SPI) ve yayınlanmış okuma view'ı üzerinden konuşur (§5.4, K1).
 - `@Stable`/`@Experimental`/`@Internal` anotasyonları ve japicmp karşılaştırmasıyla kırıcı değişiklik politikası uygulanır (§5.4).

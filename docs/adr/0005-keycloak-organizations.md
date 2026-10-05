@@ -32,7 +32,7 @@ v1 zaten Keycloak/OIDC kullanıyordu (§2.1). Realm-per-tenant yaklaşımı tek 
 | Seçenek | Neden seçilmedi |
 |---|---|
 | Realm-per-tenant | ~500 tenant'tan sonra yönetim düzleminde ciddi yavaşlama; 1000 tenant'ta provisioning 59 dk (Organizations: 84 sn), bellek 43 GB (~0,9 GB). Sadece istisna olarak kalır. |
-| Spring Security 7 Authorization Server | Birincil seçim olarak değerlendirilmiyor; küçük on-prem ayak izi riski için yedek plan (§6.3.1, §19 R5) |
+| Spring Security 7 Authorization Server | Doküman ayrı bir gerekçe vermiyor; yedek plan (§6.3.1, §19 R5). |
 
 ## Doğrulama
 

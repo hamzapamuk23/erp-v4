@@ -30,9 +30,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# postgres is always built (tiny; init scripts are baked in). app is built only without SKIP_BUILD,
+# so with SKIP_BUILD=1 the tested image is exactly $ERP_APP_IMAGE.
+"${COMPOSE[@]}" build postgres
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   "${COMPOSE[@]}" build app
 fi
 "${COMPOSE[@]}" up -d --no-build postgres app
-"${COMPOSE[@]}" run --build --name "$E2E_CONTAINER" e2e
+# `compose build e2e` would also rebuild its depends_on service app (over $ERP_APP_IMAGE), so build the
+# runner image directly under the name compose gives it.
+docker build --file ../docker/e2e.Dockerfile --tag erp-smoke-e2e ../..
+"${COMPOSE[@]}" run --no-deps --name "$E2E_CONTAINER" e2e
 echo "Smoke test passed."

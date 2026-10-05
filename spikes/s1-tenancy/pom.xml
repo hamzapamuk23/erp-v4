@@ -25,6 +25,15 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -39,6 +48,18 @@
         <dependency>
             <groupId>com.smart.erp</groupId>
             <artifactId>erp-platform-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Migrations run in the test fixture, the way `erpctl migrate` would (doc §4.6); never at application start-up.
+                 Only flyway-core: Boot 4 auto-configures Flyway only when spring-boot-flyway is on the classpath. -->
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

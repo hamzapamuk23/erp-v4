@@ -14,9 +14,14 @@ public class PostgresTestcontainer {
     /** Same initdb arguments as deploy/compose/compose.yaml (doc §7.8). */
     private static final String INITDB_ARGS = "--encoding=UTF8 --locale-provider=builtin --builtin-locale=C.UTF-8";
 
+    /** A container configured like production, not yet started; for fixtures that need more than one database. */
+    public static PostgreSQLContainer newContainer() {
+        return new PostgreSQLContainer(IMAGE).withEnv("POSTGRES_INITDB_ARGS", INITDB_ARGS);
+    }
+
     @Bean
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer(IMAGE).withEnv("POSTGRES_INITDB_ARGS", INITDB_ARGS);
+        return newContainer();
     }
 }

@@ -23,7 +23,7 @@ docker compose -f deploy/compose/compose.yaml --profile dev up -d
 
 | İş | Komut |
 |---|---|
-| Altyapıyı başlat / durdur | `docker compose -f deploy/compose/compose.yaml --profile dev up -d` / `... down` |
+| Altyapıyı başlat / durdur | `docker compose -f deploy/compose/compose.yaml --profile dev up -d` / `docker compose -f deploy/compose/compose.yaml --profile dev down` |
 | Backend'i çalıştır | `./mvnw -q install -DskipTests && ./mvnw -pl app spring-boot:run -Dspring-boot.run.profiles=dev` (IDE'de: `ErpApplication`, aktif profil `dev`) |
 | SPA dev sunucusu | `cd web && pnpm --filter @erp/web dev` → http://localhost:5173 (`/api`, `/actuator` → 8080) |
 | Backend testleri | `./mvnw verify` |
@@ -48,5 +48,5 @@ docker compose -f deploy/compose/compose.yaml --profile dev up -d
 | `Could not find a valid Docker environment` | Docker Desktop'ı başlatın |
 | `required variable POSTGRES_PASSWORD is missing` | `deploy/compose/init-env.sh` |
 | 5432 portu dolu | `.env`'e `POSTGRES_PORT=5433`; backend'i `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/erp_platform` ile çalıştırın |
-| Dev veritabanını sıfırlamak | `docker compose -f deploy/compose/compose.yaml down --volumes` (veri silinir) |
-| PostgreSQL init betiğini (`deploy/compose/postgres/initdb/`) değiştirdim ama etkisi yok | Betikler `erp-postgres:local` imajına gömülür ve yalnızca boş veri volume'unda çalışır: `docker compose -f deploy/compose/compose.yaml build postgres`, ardından `down --volumes` ile dev volume'unu sıfırlayın (veri silinir) |
+| Dev veritabanını sıfırlamak | `docker compose -f deploy/compose/compose.yaml --profile dev down --volumes` (veri silinir) |
+| PostgreSQL init betiğini (`deploy/compose/postgres/initdb/`) değiştirdim ama etkisi yok | Betikler `erp-postgres:local` imajına gömülür ve yalnızca boş veri volume'unda çalışır: `docker compose -f deploy/compose/compose.yaml build postgres`, ardından `docker compose -f deploy/compose/compose.yaml --profile dev down --volumes` ile dev volume'unu sıfırlayın (veri silinir) |

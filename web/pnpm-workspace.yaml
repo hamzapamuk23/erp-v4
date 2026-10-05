@@ -3,6 +3,10 @@ packages:
   - apps/*
   - e2e
 
+# vue-demi's postinstall only selects a Vue 2/3 shim; Vue 3 is the default, so the script stays denied.
+allowBuilds:
+  vue-demi: false
+
 # Single source of truth for frontend versions (the web counterpart of the Maven BOM).
 # TypeScript stays on 6.x: typescript-eslint 8.71 supports `>=4.8.4 <6.1.0`.
 catalog:

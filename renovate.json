@@ -4,6 +4,16 @@
   "timezone": "Europe/Istanbul",
   "schedule": ["before 7am on monday"],
   "prConcurrentLimit": 5,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Keep the test PostgreSQL image in sync with deploy/compose/postgres/Dockerfile",
+      "managerFilePatterns": ["/(^|/)PostgresTestcontainer\\.java$/"],
+      "matchStrings": ["IMAGE = \"postgres:(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "postgres"
+    }
+  ],
   "packageRules": [
     {
       "description": "Major upgrades need an explicit decision (doc §11.8, ADR-025)",
@@ -27,6 +37,12 @@
       "description": "typescript-eslint supports TypeScript <6.1; TS 7 needs its own decision",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<6.1"
+    },
+    {
+      "description": "Compose image and the Java test constant move in one PR",
+      "groupName": "PostgreSQL image",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"]
     },
     {
       "description": "PostgreSQL major upgrades are planned operations (doc §11.2, erpctl pg-upgrade)",

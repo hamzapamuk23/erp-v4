@@ -47,3 +47,9 @@ erp:
     datasource:
       maximum-pool-size: 4
       idle-timeout: 5m
+
+spike:
+  jobs:
+    polling-interval: 1s
+    threads: 4
+    shutdown-max-wait: 30s

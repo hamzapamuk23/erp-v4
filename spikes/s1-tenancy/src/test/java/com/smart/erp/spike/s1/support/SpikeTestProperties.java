@@ -11,6 +11,7 @@ public final class SpikeTestProperties {
     public static Map<String, String> all() {
         Map<String, String> properties = new LinkedHashMap<>(SpikeDatabases.applicationProperties());
         properties.put("erp.tenancy.datasource.connection-timeout", "2s");
+        properties.put("spike.jobs.polling-interval", "100ms");
         return properties;
     }
 }

@@ -49,6 +49,13 @@ public class SampleRecord {
         return processedAt;
     }
 
+    /** Idempotent: a redelivered job does not move the timestamp. */
+    void markProcessed(Instant at) {
+        if (processedAt == null) {
+            processedAt = at;
+        }
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof SampleRecord that && id.equals(that.id);

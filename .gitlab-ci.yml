@@ -103,9 +103,11 @@ smoke:compose:
   extends: .docker-cli
   needs: [image:build]
   variables:
-    ERP_APP_IMAGE: $APP_IMAGE
     SKIP_BUILD: "1"
   script:
+    # Test the exact bytes that image:sign signs: the digest, never the mutable tag.
+    - test -n "${APP_IMAGE_DIGEST:-}" || { echo "APP_IMAGE_DIGEST is empty (image:build dotenv missing)"; exit 1; }
+    - export ERP_APP_IMAGE="$CI_REGISTRY_IMAGE/app@$APP_IMAGE_DIGEST"
     - apk add --no-cache bash
     - deploy/compose/smoke.sh
   artifacts:

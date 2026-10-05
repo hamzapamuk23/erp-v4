@@ -1,0 +1,44 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":dependencyDashboard"],
+  "timezone": "Europe/Istanbul",
+  "schedule": ["before 7am on monday"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Major upgrades need an explicit decision (doc §11.8, ADR-025)",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "groupName": "Spring Boot",
+      "matchPackageNames": ["org.springframework.boot:**"]
+    },
+    {
+      "groupName": "Spring Modulith",
+      "matchPackageNames": ["org.springframework.modulith:**"]
+    },
+    {
+      "description": "npm package and runner image must move together",
+      "groupName": "Playwright",
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"]
+    },
+    {
+      "description": "typescript-eslint supports TypeScript <6.1; TS 7 needs its own decision",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.1"
+    },
+    {
+      "description": "PostgreSQL major upgrades are planned operations (doc §11.2, erpctl pg-upgrade)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Node stays on the 24 LTS line until a planned move",
+      "matchPackageNames": ["node"],
+      "allowedVersions": "/^24\\./"
+    }
+  ]
+}

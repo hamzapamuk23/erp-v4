@@ -1,0 +1,8 @@
+title = "erp-v4 gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lockfile integrity hashes are not secrets"
+paths = ['''(^|/)pnpm-lock\.yaml$''']

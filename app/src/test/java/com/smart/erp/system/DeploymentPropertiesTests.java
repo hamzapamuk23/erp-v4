@@ -28,6 +28,18 @@ class DeploymentPropertiesTests {
     }
 
     @Test
+    void rejectsEmptyMode() {
+        runner.withPropertyValues("erp.deployment.mode=")
+                .run(context -> assertThat(context).getFailure().hasStackTraceContaining("erp.deployment.mode"));
+    }
+
+    @Test
+    void rejectsBlankMode() {
+        runner.withPropertyValues("erp.deployment.mode=   ")
+                .run(context -> assertThat(context).getFailure().hasStackTraceContaining("erp.deployment.mode"));
+    }
+
+    @Test
     void rejectsMissingMode() {
         runner.run(context -> assertThat(context).getFailure().hasMessageContaining("erp.deployment"));
     }

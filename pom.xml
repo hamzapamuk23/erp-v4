@@ -123,4 +123,15 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <!-- Phase 0 spikes (doc §15.3): throwaway code outside the default reactor, deleted when Phase 0 closes.
+                 Run with: ./mvnw -Pspikes -pl spikes/<name> verify (see spikes/README.md). -->
+            <id>spikes</id>
+            <modules>
+                <module>spikes/s1-tenancy</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>

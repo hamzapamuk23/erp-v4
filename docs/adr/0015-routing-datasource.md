@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Durum** | Önerildi |
+| **Durum** | Kabul edildi |
 | **Tarih** | 2026-10-05 |
 | **Geri dönüş maliyeti** | Pahalı |
 | **Kaynak** | v4-platform.md §4.5 |
@@ -36,3 +36,5 @@ Tenant başına veritabanı modelinde (ADR-0003) JPA, jOOQ ve Modulith'in hepsi 
 ## Doğrulama
 
 S1 spike'ı (§4.5: "Faz 0'daki S1 spike'ında doğrulanır"): 2 tenant DB + routing DataSource + Hibernate 7 (`allow_jdbc_metadata_access=false`, havuzlu optimizer yok), bağlam yayılımı, bağlamsız erişimde hata, transaction içinde tenant değiştirme koruması, jOOQ öncesi `flush`. Faz 2 çıkış kriteri: bağlamsız erişim hata fırlatıyor; kapsam: çoklu tenant routing ve tembel havuzlar (LRU).
+
+**S1 sonucu (2026-10-05, `dafa8dc`):** Tek routing DataSource (statik hedef haritası ve varsayılan hedef yok) JPA, jOOQ, `JdbcClient` ve Modulith'e hizmet etti; tam açılış, sağlık/metrik bağlama ve kapanış boyunca tenant'sız bağlantı isteği 0 (sayaçlı test). Gerekli ayarlar: `allow_jdbc_metadata_access=false` + ürün adı ve ana sürüm (diyalekt PostgreSQL 18), `ddl-auto=none`, `sql-dialect=POSTGRES`, `ignore-routing-data-sources=true`; `unwrap/isWrapperFor` yönlendirilmez. Platform DataSource `defaultCandidate=false` ile ayrıldı. Tembel havuzlar (`minIdle=0`, `max=4`, 5 dk boşta) oluşturulurken bağlantı açmıyor; bilinmeyen/askıdaki tenant'a havuz açılmıyor; transaction içinde ya da transaction senkronizasyonlu bir kapsamda (`SUPPORTS`, `NOT_SUPPORTED`) tenant değiştirme reddediliyor. İlk koruma sadece gerçek transaction'a bakıyordu ve `SUPPORTS` kapsamında yazımı sessizce ilk tenant'a götürdü; son incelemede bulundu ve düzeltildi ([B12](../spikes/s1-tenancy.md)). Faz 2'ye: LRU sınırı (aktif bağlantılı havuz kapatılmaz), durum değişikliğinde havuz kapatma, tenant başına metrik. Ayrıntı: [docs/spikes/s1-tenancy.md](../spikes/s1-tenancy.md) B4–B9, B12, B18.

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Durum** | Önerildi |
+| **Durum** | Kabul edildi |
 | **Tarih** | 2026-10-05 |
 | **Geri dönüş maliyeti** | Pahalı |
 | **Kaynak** | v4-platform.md §4.4 |
@@ -34,3 +34,5 @@ Domain olayları ve outbox (§5.4, §6.15) iş verisiyle aynı transaction'da ya
 ## Doğrulama
 
 S1 spike'ı: Modulith olay kaydı, açılışta yeniden yayın kapalı, tenant dolaşan yeniden yayın (§15.3). Faz 2 çıkış kriteri: izolasyon paketi (olay seviyesi dahil) 3 tenant ile yeşil.
+
+**S1 sonucu (2026-10-05, `dafa8dc`):** Yayın kaydı tenant DB'sinde (`platform_events.event_publication`, Modulith 2.1.1 v2 düzeni, migration ile); async dinleyici yayıncının tenant'ında çalıştı; `completion-mode=delete` ile tamamlanan yayın silindi; başarısız yayın tenant dolaşan yeniden yayınla (`republishAll`) kendi tenant'ında yeniden gönderildi, erişilemeyen tenant diğerlerini durdurmadı; aynı işlev db-scheduler'da tekrarlayan platform işi olarak açılışta değil, vadesi gelince çalıştı. Uygulama kuralları: Modulith 2.1.1 açılışta `databaseType` için ve kapanışta `destroy()` için tenant'sız sorgu yapıyor; `ModulithTenancySupport` ile bağlantısız karşılandı (upstream'e bildirilecek). `schema-initialization.enabled=false` açıkça verilmeli (özellik yokken açık). Dolaşan iş her tenant için havuz açtığından ve uzun bir duruştan sonra açılışta çalışabildiğinden Faz 2'de etkinlik göstergesine bağlanmalı. Ayrıntı: [docs/spikes/s1-tenancy.md](../spikes/s1-tenancy.md) B1–B3, B10, B16.

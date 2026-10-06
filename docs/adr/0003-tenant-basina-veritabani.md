@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Durum** | Önerildi |
+| **Durum** | Kabul edildi |
 | **Tarih** | 2026-10-05 |
 | **Geri dönüş maliyeti** | Tek yön |
 | **Kaynak** | v4-platform.md §4.2 |
@@ -33,3 +33,5 @@
 ## Doğrulama
 
 S1 spike'ı: 2 tenant DB ile routing DataSource + Hibernate 7 + jOOQ + Modulith olay kaydı + db-scheduler (§15.3). Faz 2 çıkış kriteri: 3 tenant ile izolasyon paketi (API, repository, olay, iş, cache) yeşil; bağlamsız erişim hata fırlatıyor.
+
+**S1 sonucu (2026-10-05, `dafa8dc`):** Platform DB + iki aktif, bir askıdaki ve DB'si olmayan bir tenant ile JDBC, JPA ve jOOQ yazma/okumaları sadece bağlı tenant'ın DB'sine gitti (routing'i atlayan süper kullanıcı sorgusuyla doğrulandı); tenant rolü platform DB'sine bağlanamıyor. Ayrıntı ve bulgular: [docs/spikes/s1-tenancy.md](../spikes/s1-tenancy.md). Faz 2 çıkış kriteri (3 tenant'lı izolasyon paketi) geçerliliğini korur.

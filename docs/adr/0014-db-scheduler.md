@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Durum** | Önerildi |
+| **Durum** | Kabul edildi |
 | **Tarih** | 2026-10-05 |
 | **Geri dönüş maliyeti** | Pahalı |
 | **Kaynak** | v4-platform.md §6.12 |
@@ -35,3 +35,5 @@ v1'de 12 dosyada `@Scheduled` iş vardı ve hiçbiri kilitli değildi; sonuç ç
 ## Doğrulama
 
 S1 spike'ı: db-scheduler, `tenantKey` ve `eventId` ile tekilleştirme (§15.3). Faz 2 çıkış kriteri (kapsam: tenant başına iş örnekleri ve kotalar; izolasyon paketinin iş seviyesi). K12 Faz 0A'dan itibaren ArchUnit ile build'de denetleniyor (`docs/guides/coding-rules.md`).
+
+**S1 sonucu (2026-10-05, `dafa8dc`):** db-scheduler 16.12.0 platform DB'sinde; `ExecutionInterceptor` iş verisindeki tenant'ı bağlayıp iş bitince kaldırıyor; iş verisi JSON (Jackson 3); iş örneği kimliği = `eventId`, `scheduleIfNotExists` iş satırı dururken tekrar teslimde yeni iş üretmedi; askıdaki tenant'ın işi görünür biçimde düştü ve 5 dakika sonraya planlandı. Tenant dolaşan yeniden yayın tekrarlayan bir platform işi olarak açılışta değil, vadesi gelince çalıştı. **Düzeltme (Sonuçlar'daki "olay iki kez teslim edilse bile iş bir kez planlanır" cümlesi için):** tekilleştirme sadece iş satırı varken geçerlidir; tamamlanan tek seferlik işin satırı silindiğinden, tamamlanmadan sonraki tekrar teslim işi yeniden çalıştırır. Garanti, Karar'daki "işler idempotent yazılır" kuralıdır; karar değişmedi. Faz 2'ye: tenant başına iş örnekleri ve kotalar, etkinlik göstergesi, `scheduled_tasks`'ta tenant'a göre temizlik (§4.7.1). Ayrıntı: [docs/spikes/s1-tenancy.md](../spikes/s1-tenancy.md) B15–B16.

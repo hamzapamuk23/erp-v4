@@ -131,6 +131,7 @@
             <id>spikes</id>
             <modules>
                 <module>spikes/s1-tenancy</module>
+                <module>spikes/s2-identity</module>
             </modules>
         </profile>
     </profiles>

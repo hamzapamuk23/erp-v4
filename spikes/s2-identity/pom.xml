@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.smart.erp</groupId>
+        <artifactId>erp-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>erp-spike-s2-identity</artifactId>
+    <name>ERP :: Spike :: S2 identity</name>
+    <description>Phase 0 S2 spike (doc §15.3). Throwaway: deleted when Phase 0 closes; findings live in docs/spikes/s2-identity.md.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.smart.erp</groupId>
+            <artifactId>erp-platform-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Migrations run in the test fixture, the way `erpctl migrate` would (doc §4.6); never at application start-up.
+                 Only flyway-core: Boot 4 auto-configures Flyway only when spring-boot-flyway is on the classpath. -->
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- SpikeBrowser reaches the app like Caddy does: original Host header (design decision 1). -->
+                    <argLine>-Djdk.httpclient.allowRestrictedHeaders=host</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

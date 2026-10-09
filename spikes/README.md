@@ -10,3 +10,4 @@
 | Spike | Klasör | Sonuç dokümanı |
 |---|---|---|
 | S1 — Tenancy yığını | [`s1-tenancy/`](s1-tenancy/) | [docs/spikes/s1-tenancy.md](../docs/spikes/s1-tenancy.md) |
+| S2 — Kimlik | [`s2-identity/`](s2-identity/) | [docs/spikes/s2-identity.md](../docs/spikes/s2-identity.md) |

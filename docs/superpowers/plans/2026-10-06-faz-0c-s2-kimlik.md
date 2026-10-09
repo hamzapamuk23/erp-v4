@@ -15,7 +15,7 @@
 - **Spike atılacak koddur** (§15.3). `spikes/s2-identity/` varsayılan reaktörde değildir, sadece `-Pspikes` ile derlenir ve plan 0E'de silinir. Kalıcı çıktılar: `docs/spikes/s2-identity.md`, ADR güncellemeleri ve `spikes/README.md`'deki S2 satırı.
 - Sürümler yukarıdaki gibidir. **Yeni üçüncü taraf bağımlılık yoktur:** eklenen starter'lar Boot 4.1.1 BOM'undandır ve §12.1 yığınındadır (`spring-boot-starter-security-oauth2-client`, `spring-boot-starter-security-oauth2-resource-server`, `spring-boot-starter-session-jdbc`). Keycloak konteyneri Testcontainers çekirdeğindeki `GenericContainer` ile kurulur; `testcontainers-keycloak` eklenmez.
 - Paket kökü **`com.smart.erp.spike.s2`**. Kod İngilizce, dokümanlar Türkçe (§14).
-- **Tarayıcıya token verilmez** (ADR-0006): ne gövdede, ne başlıkta, ne çerezde. BFF access ve refresh token saklamaz (Tasarım kararı 5).
+- **Tarayıcıya token verilmez** (ADR-0006): ne gövdede, ne başlıkta, ne çerezde. BFF access ve refresh token saklamaz; oturumda sadece principal'ın taşıdığı ID token vardır (Tasarım kararı 5).
 - **Oturum çerezi:** `__Host-SESSION`, `Path=/; Secure; HttpOnly; SameSite=Lax`, `Domain` yok.
 - **Varsayılan tenant yoktur:** kayıtsız host → 404, `ACTIVE` olmayan tenant → 503, bağlamsız `TenantContext.require()` → `MissingTenantContextException`.
 - Uygulama kodu sadece standart OIDC kullanır (ADR-0005). Keycloak'a özgü iki bilgi, yani ipucu biçimi `organization:<alias>` ile iddianın adı ve şekli, tek sınıftadır: `identity.KeycloakOrganizations`. Keycloak Admin API'si sadece test fixture'ındadır (provisioning adaptörünün rolü).
@@ -37,24 +37,24 @@
 
 ## Tasarım kararları (plan içinde verilenler)
 
-1. **Test topolojisi üretim topolojisiyle aynıdır (Caddy arkası).** TLS proxy'de biter. Uygulama `server.forward-headers-strategy: native` ile `X-Forwarded-Proto`'ya sadece güvenilen proxy'den (Tomcat `RemoteIpValve`'in iç ağ aralıkları) gelirse güvenir. Tenant `Host`'tan okunur (Caddy `Host`'u korur). Bu yüzden test tarayıcısı `http://127.0.0.1:<port>`'a `Host: <tenant>.erp.test` + `X-Forwarded-Proto: https` ile gider (`-Djdk.httpclient.allowRestrictedHeaders=host`). Uygulamanın ürettiği `redirect_uri` portsuzdur (`https://acme.erp.test/login/oauth2/code/keycloak`), bu yüzden Keycloak'a sabit olarak kaydedilebilir. Çerez önekini ve SameSite'ı gerçek tarayıcıda doğrulayan E2E testi Faz 3'tedir; burada `Set-Cookie` öznitelikleri doğrulanır.
-2. **Tenant eşlemesi platform DB'sinde iki tablodadır:** `tenant(tenant_key, status, oidc_issuer, organization_alias)` (`(oidc_issuer, organization_alias)` tekil) ve `tenant_domain(host → tenant_key)`. §4.3 organization bağını `tenant_domain`'a koyuyor. Oysa bir tenant'ın birden çok host'u olabilir ve bearer isteğinin anlamlı bir host'u yoktur, bu yüzden bağ `tenant` tablosundadır (bulgu adayı). Çözümleme anahtarı `(issuer, alias)`'tır; böylece ayrı realm istisnası (ADR-0005) kod değişikliği gerektirmez.
+1. **Test topolojisi üretim topolojisiyle aynıdır (Caddy arkası).** TLS proxy'de biter. Uygulama `server.forward-headers-strategy: native` ile Tomcat `RemoteIpValve`'i kullanır. Boot 4.1.1 varsayılanlarıyla (`TomcatServerProperties.Remoteip`) `internal-proxies` bütün özel ağ aralıklarıdır (10/8, 172.16/12, 192.168/16, 100.64/10, 127/8 ve IPv6 karşılıkları) ve `host-header` `X-Forwarded-Host`'tur. Yani bu aralıklardan gelen istekte `X-Forwarded-Proto` ve `X-Forwarded-Host`'a güvenilir; tenant'ı belirleyen `request.getServerName()`, `X-Forwarded-Host` varsa ondan, yoksa `Host`'tan gelir. Caddy ikisini de aynı değerle gönderir. On-prem'de LAN'daki her makine bu aralıktadır; bu yüzden üretimde `internal-proxies` Caddy'ye daraltılır ve uygulama portu dışarı açılmaz (Faz 1/7 girdisi, bulgu). Spike varsayılanı değiştirmez, davranışı testle sabitler (`BffLoginTests#forwardedHostFromATrustedProxyDecidesTheTenant`). Bu yüzden test tarayıcısı `http://127.0.0.1:<port>`'a `Host: <tenant>.erp.test` + `X-Forwarded-Proto: https` ile gider (`-Djdk.httpclient.allowRestrictedHeaders=host`). Uygulamanın ürettiği `redirect_uri` portsuzdur (`https://acme.erp.test/login/oauth2/code/keycloak`), bu yüzden Keycloak'a sabit olarak kaydedilebilir. Çerez önekini ve SameSite'ı gerçek tarayıcıda doğrulayan E2E testi Faz 3'tedir; burada `Set-Cookie` öznitelikleri doğrulanır.
+2. **Tenant eşlemesi platform DB'sinde iki tablodadır:** `tenant(tenant_key, status, oidc_issuer, organization_alias)` (`(oidc_issuer, organization_alias)` tekil) ve `tenant_domain(host → tenant_key)`. §4.3 organization bağını `tenant_domain`'a koyuyor. Oysa bir tenant'ın birden çok host'u olabilir ve bearer isteğinin anlamlı bir host'u yoktur, bu yüzden bağ `tenant` tablosundadır (bulgu adayı). Çözümleme anahtarı `(issuer, alias)`'tır; böylece ayrı realm istisnasında (ADR-0005) **çözümleyici** değişmez. **Zincirler ise değişir:** bearer zinciri tek `issuer-uri` ile doğrular (başka realm'in token'ı imzada düşer), tarayıcı zincirinin tek client registration'ı tek issuer'lıdır. Ayrı realm için bearer'da `JwtIssuerAuthenticationManagerResolver` (güvenilen issuer'lar = `tenant.oidc_issuer`), tarayıcıda tenant'ın issuer'ına göre client registration gerekir. ADR-0005'in "kod değişmez" cümlesi bu yüzden doğru değildir; ADR-0005 S2 sonunda **Değişti** olur (Task 7). Çoklu issuer spike'ta kurulmaz; ilk ayrı realm müşterisiyle gelir.
 3. **Tek kural: host'un tenant'ı varsa her kimlik onunla uyuşmak zorundadır.** Tarayıcıda oturum principal'ının tenant'ı host'unkinden farklıysa 401 döner; oturum silinmez, tenant bağlamı kurulmaz. Bearer'da tenant token'dan `(iss, organization)` ile çözülür. İstek kayıtlı bir tenant host'una gelmişse ve tenant farklıysa 403 döner. Nötr bir host'ta (`api.erp.test`) tenant'ı token belirler.
 4. **Oturum principal'ı tenant'ı taşır:** `TenantOidcUser` (`DefaultOidcUser` + `TenantKey`), adı `<tenant>:<sub>`. Ayrı bir oturum özniteliği yoktur ve kontrol tek yerde yapılır. Spring Session'ın principal index'i `(kullanıcı, tenant)` oturumlarını bulur; Faz 3'teki "organization'dan çıkar → o tenant'taki oturumları bitir" işlemi buna dayanır.
-5. **BFF token saklamaz:** `OAuth2AuthorizedClientRepository` token'ları tutmayan bir uygulamadır (`DiscardingAuthorizedClientRepository`). BFF kullanıcı token'ıyla aşağı akışta API çağırmaz. Boot'un varsayılanı (`InMemoryOAuth2AuthorizedClientService`) token'ları instance belleğinde sınırsız biriktirir ve instance'lar arasında tutarsızdır. RP-initiated logout ID token'ı principal'dan alır. Üyelik iptalinin oturum boyunca yansıması için refresh gerekirse konu Faz 3'te yeniden açılır.
+5. **BFF token saklamaz:** `OAuth2AuthorizedClientRepository` token'ları tutmayan bir uygulamadır (`DiscardingAuthorizedClientRepository`). BFF kullanıcı token'ıyla aşağı akışta API çağırmaz. Boot'un varsayılanı (`InMemoryOAuth2AuthorizedClientService`) token'ları instance belleğinde sınırsız biriktirir ve instance'lar arasında tutarsızdır. RP-initiated logout ID token'ı principal'dan alır; bu yüzden oturumda **yalnızca ID token** vardır (`TenantOidcUser` içinde, e-posta ve adla birlikte), access ve refresh token yoktur. Sonuç: uygulama oturumu Keycloak oturumundan bağımsız yaşar. `spring.session.timeout` yalnızca boşta kalma süresidir; aktif kullanılan oturumun mutlak bir ömrü yoktur ve Keycloak'ta kullanıcının devre dışı bırakılması ya da organization'dan çıkarılması oturuma kendiliğinden yansımaz. Mutlak ömür (ör. ID token'ın `auth_time`'ı ile) ve iptal Faz 3 kararıdır (bulgu; hedef ASVS L2, §10.1).
 6. **CSRF token'ı oturumda tutulur (senkronizör token).** Spring Security'nin varsayılanı kullanılır: `HttpSessionCsrfTokenRepository` + XOR maskesi. SPA token'ı `/bootstrap` gövdesinden alır ve `X-CSRF-TOKEN` başlığıyla geri gönderir. Çerez tabanlı double-submit (`XSRF-TOKEN`) seçilmez: kardeş bir alt alan adı (başka bir tenant) `.erp.test` için çerez basabilir (cookie tossing) ve SameSite=Lax kardeşler arası POST'u durdurmaz.
-7. **Organization ipucu ve PKCE, `DefaultOAuth2AuthorizationRequestResolver`'ın özelleştiricisinde eklenir.** İpucu bir güvenlik sınırı değildir. **Kontrol ID token'da yapılır:** `iss` tenant'ın issuer'ına eşit olmalı, `organization` iddiası da tam olarak `{tenant'ın alias'ı}` olmalıdır (fazlası da eksiği de ret). Giriş hatası yönlendirme değil 403 üretir; yönlendirme olsaydı Keycloak SSO oturumu yüzünden sonsuz döngüye girerdi.
+7. **Organization ipucu `DefaultOAuth2AuthorizationRequestResolver`'ın özelleştiricisinde eklenir; PKCE kayıttan gelir.** Spring Security 7.1.1 PKCE'yi gizli istemcide varsayılan olarak eklemez; kayıtta `ClientSettings.requireProofKey(true)` verilir. İpucu bir güvenlik sınırı değildir. **Kontrol ID token'da yapılır:** `iss` tenant'ın issuer'ına eşit olmalı, `organization` iddiası da tam olarak `{tenant'ın alias'ı}` olmalıdır (fazlası da eksiği de ret). Giriş hatası yönlendirme değil 403 üretir; yönlendirme olsaydı Keycloak SSO oturumu yüzünden sonsuz döngüye girerdi. **Bu kontrol, callback'in başka bir host'ta tekrar oynatılmasına karşı tek savunmadır:** Spring Security 7.1.1 (`OidcAuthorizationCodeAuthenticationProvider`) callback'te sadece `state`'i karşılaştırır, `redirect_uri`'yi karşılaştırmaz ve kodu oturumdaki (ilk host'un) `redirect_uri`'siyle takas eder. Kontrol olmasaydı acme'de başlatılıp globex'te tamamlanan giriş globex oturumu açardı.
 8. **İstemci kaydı tembeldir:** `LazyClientRegistrationRepository` OIDC discovery'yi ilk girişte yapar. Boot'un `issuer-uri` ile oluşturduğu kayıt açılışta Keycloak'a gider ve on-prem compose'da Keycloak'tan önce kalkan uygulamayı düşürür. Bearer tarafında Boot'un `issuer-uri` decoder'ı zaten tembeldir.
-9. **Spring Session platform DB'sinde, kendi transaction'ıyla çalışır:** platform DataSource `@SpringSessionDataSource` ile işaretlenir, transaction için `@SpringSessionTransactionOperations` (platform DS üzerinde `DataSourceTransactionManager`) verilir. Tenant DataSource yer tutucusu varsayılan aday olduğu için yanlış kablolama sayaçta görünür.
-10. **Okunamayan oturum, oturum yok sayılır:** Spring Session'ın deserializer'ı hata durumunda `null` döner ve WARN loglar. Spring Security sınıflarının `serialVersionUID`'si minör sürümle değişir; böylece sürüm geçişinde eski instance'ın yazdığı oturum 500 yerine yeniden giriş üretir.
+9. **Spring Session platform DB'sinde, kendi transaction'ıyla çalışır:** platform DataSource `@SpringSessionDataSource` ile işaretlenir. Spring Session 4.1.1 (`JdbcHttpSessionConfiguration`) transaction için iki kanca tanır: adı `springSessionTransactionOperations` olan bir `TransactionOperations` ya da `@SpringSessionTransactionManager` nitelikli bir `PlatformTransactionManager`. İkisi de yoksa bağlamdaki tek `PlatformTransactionManager`'ı alır; o da Boot'un varsayılan DataSource'taki (Faz 1'de routing DataSource'taki) yöneticisidir. Spike ilk kancayı kullanır: `@Bean(name = "springSessionTransactionOperations", defaultCandidate = false)`, platform DS üzerinde `DataSourceTransactionManager`, `PROPAGATION_REQUIRES_NEW` (kütüphanenin kendi varsayılanı). `defaultCandidate = false` zorunludur: Boot'un `transactionTemplate`'i `@ConditionalOnMissingBean(TransactionOperations.class)` ile kurulur ve varsayılan aday olan bir `TransactionOperations` onu bastırır; uygulamanın `TransactionTemplate`'i ya kaybolur ya da platform DB'sine gider. Tenant DataSource yer tutucusu varsayılan aday olduğu için yanlış kablolama sayaçta görünür.
+10. **Okunamayan oturum S2'nin konusu değildir (Faz 1 notu).** Spring Security 7.1.1 serileştirme kimliklerini sabit tutar (`SpringSecurityCoreVersion.SERIAL_VERSION_UID = 620L`; `OAuth2AuthenticationToken` ve `SecurityContextImpl` 620L, `DefaultOidcUser` ve `OidcIdToken` sabit UID'li), yani minör sürüm geçişi oturumu bozmaz. Kalan riskler (oturumda serileştirilen kendi sınıflarımızdaki uyumsuz değişiklik, Spring Security major yükseltmesi, bozuk satır) Faz 1'e not olarak geçer: kendi sınıflarımızda sabit `serialVersionUID` ve gerekirse Spring Session'ın `springSessionConversionService` kancasıyla toleranslı bir deserializer.
 
 ## Review Focus
 
 1. **Sahte ya da kurcalanmış organization:** ipucu başka bir organization'la ya da `organization:*` ile değiştirilir, ipucu silinir veya kullanıcı organization üyesi değildir. Beklenen: giriş 403, kimliği doğrulanmış oturum oluşmaz. → Task 4 `OrganizationClaimCheckTests`.
-2. **Oturumun başka bir tenant host'unda kullanılması:** çerez başka bir host'a taşınır, callback başka bir host'ta tekrar oynatılır ya da mali müşavirin iki oturumu karışır. Beklenen: 401 ya da 403; diğer tenant'ın bağlamı hiç kurulmaz. → Task 4 `SessionTenantBindingTests`.
-3. **Host başlığı varyantları:** büyük harf, Türkçe `İ`, sondaki nokta, `_`, tam genişlikli karakter, IP literal, boş değer, kayıtsız host. Beklenen: normalleştirme ya da 404; asla varsayılan tenant yok. → Task 1 `TenantHostTests`, Task 3 `BffLoginTests#unknownHostIs404AndStartsNoLogin`.
+2. **Oturumun başka bir tenant host'unda kullanılması:** çerez başka bir host'a taşınır, callback başka bir host'ta tekrar oynatılır ya da mali müşavirin iki oturumu karışır. Beklenen: 401 ya da 403; diğer tenant'ın bağlamı hiç kurulmaz. Callback tekrarını Spring durdurmaz, sadece iddia kontrolü durdurur (Tasarım kararı 7). → Task 4 `SessionTenantBindingTests`.
+3. **Host başlığı varyantları:** büyük harf, Türkçe `İ`, sondaki nokta, `_`, tam genişlikli karakter, IP literal, boş değer, kayıtsız host, güvenilen adresten gelen `X-Forwarded-Host`. Beklenen: normalleştirme ya da 404; asla varsayılan tenant yok; `X-Forwarded-Host`'un etkisi sabitlenir (Tasarım kararı 1). → Task 1 `TenantHostTests`, Task 3 `BffLoginTests#unknownHostIs404AndStartsNoLogin`, `#forwardedHostFromATrustedProxyDecidesTheTenant`.
 4. **Aynı site içinden (kardeş alt alan adından) CSRF:** basılmış double-submit çerezi, başka bir tenant oturumunun token'ı, token'sız çıkış. Beklenen: 403. → Task 5 `CsrfTests`, `LogoutTests`.
-5. **Geçerli ama yanlış bearer token:** organization iddiası yok, iki organization var, organization kayıtsız, audience yanlış, issuer yabancı, tenant askıda, token başka bir tenant'ın host'unda. Beklenen: 401, 403 ya da 503; oturum oluşmaz. → Task 6 `BearerChainTests`.
+5. **Geçerli ama yanlış bearer token:** organization iddiası yok, iki organization var, organization kayıtsız, audience yanlış, yabancı anahtarla imzalı, tenant askıda, token başka bir tenant'ın host'unda; geçersiz token geçerli oturum çereziyle gelir. Beklenen: 401, 403 ya da 503; oturum oluşmaz, istek çereze düşmez. → Task 6 `BearerChainTests`.
 
 ---
 
@@ -93,9 +93,9 @@ erp-v4/
  │                   ├─ kernel/    TenantKeyTests, TenantContextTests
  │                   ├─ tenancy/   TenantHostTests, JdbcTenantDirectoryTests, TenantDataSourceStandInTests
  │                   ├─ keycloak/  KeycloakOrganizationsLearningTests
- │                   └─ identity/  KeycloakOrganizationsTests, BffLoginTests, OrganizationClaimCheckTests,
- │                                 SessionTenantBindingTests, CsrfTests, LogoutTests, BearerChainTests,
- │                                 TenantJwtAuthenticationConverterTests
+ │                   └─ identity/  KeycloakOrganizationsTests, LazyClientRegistrationRepositoryTests, SessionWiringTests,
+ │                                 BffLoginTests, OrganizationClaimCheckTests, SessionTenantBindingTests, CsrfTests,
+ │                                 LogoutTests, BearerChainTests, TenantJwtAuthenticationConverterTests
  └─ docs/
      ├─ spikes/s2-identity.md                 Bulgular, kanıt tablosu, Faz 1/2/3 girdileri
      └─ adr/                                  0005, 0006, 0039, 0040 (+ not: 0004, 0024) + README dizini
@@ -177,6 +177,8 @@ Test kullanıcıları ve tenant'lar (Task 2'de Keycloak'ta, Task 3'te platform D
 | `ａcme.erp.test` (tam genişlik) | boş | ASCII dışı |
 | `acme_tr.erp.test` | boş | DNS etiketi `_` içeremez, ama `TenantKey` içerebilir (bulgu adayı) |
 | `-acme.erp.test`, `a..b`, 64 karakterlik etiket | boş | Geçersiz etiket |
+| `127.0.0.1` | `127.0.0.1` | Etiketleri geçerli; dizinde kaydı olmadığı için 404 olur (normalleştirme IP'yi ayırmaz) |
+| `[::1]` | boş | IPv6 literal geçersiz etiket |
 | `null`, `""` | boş | |
 
   - `JdbcTenantDirectoryTests` (Spring'siz; `new JdbcTenantDirectory(SpikeDatabases.platformDataSource())`; kendi anahtarları `t1_alpha` ve `t1_beta`; issuer'lar `https://issuer-a.test/realms/erp` ve `https://issuer-b.test/realms/erp`): `findsTenantByHost`, `unknownHostFindsNothing`, `findsTenantByIssuerAndAlias`, `sameAliasUnderAnotherIssuerDoesNotResolve` (ADR-0005 ayrı realm istisnası), `requireFailsForUnknownTenant`, `statusIsReadOnEveryLookup` (`setStatus` → bir sonraki `findByHost` `SUSPENDED` döner).
@@ -190,7 +192,8 @@ Test kullanıcıları ve tenant'lar (Task 2'de Keycloak'ta, Task 3'te platform D
 ```sql
 -- V202610061200__tenant_registry.sql: tenant registry and host mapping in the platform DB (doc §4.3).
 -- The organization link lives on the tenant, not on the domain: a tenant may have several hosts, and a bearer request
--- has no meaningful host (S2 design decision 2). (issuer, alias) is the key, so a separate realm needs no code change.
+-- has no meaningful host (S2 design decision 2). (issuer, alias) is the key, so a separate realm needs no resolver
+-- change; the security chains still trust a single issuer (S2 finding).
 create table tenant (
     tenant_key         text primary key check (tenant_key ~ '^[a-z][a-z0-9_]{1,29}$'),
     status             text not null check (status in ('PROVISIONING', 'ACTIVE', 'SUSPENDED', 'MAINTENANCE', 'ARCHIVED')),
@@ -267,7 +270,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces:
   - `KeycloakOrganizations`: `CLAIM = "organization"`, `static String scopeFor(String alias)` (→ `organization:<alias>`), `static Set<String> aliases(@Nullable Object claim)`. Liste, map (anahtarlar) ve tek string şekillerini kabul eder; biçimi bozuk iddia boş küme döner.
   - `SpikeKeycloak`: `IMAGE`, `issuer()`, `password(String username)`, `clientSecret(String clientId)`, `codeFlow(String username, String scope) → Tokens`, `clientCredentials(String clientId) → String`, `authorizationUrl(String clientId, String redirectUri, String scope) → String`, `createClient(String json) → int`, `createOrganization(String alias, String domain) → int`, `applicationProperties() → Map<String, String>`, `record Tokens(String idToken, String accessToken)`.
-  - `SpikeBrowser`: `SpikeBrowser(int appPort)`, `record Page(URI url, int status, HttpHeaders headers, String body)` + `Optional<String> location()` (mantıksal URL'ye göre çözülmüş), `get(String url, String... headerPairs)`, `post(String url, Map<String, String> form, String... headerPairs)`, `login(String host, String username)`, `follow(Page, String username, @Nullable String stopBefore)`, `rewriteAuthorizationRequests(UnaryOperator<URI>)`, `cookie(String host, String name)`, `putCookie(String host, String name, String value)`, `setCookieHeaders(String host) → List<String>`, `appResponses() → List<Page>`, `static MultiValueMap<String, String> query(String url)` (çözülmüş değerler), `static Map<String, Object> json(Page)`.
+  - `SpikeBrowser`: `SpikeBrowser(int appPort)`, `record Page(URI url, int status, HttpHeaders headers, String body)` + `Optional<String> location()` (mantıksal URL'ye göre çözülmüş), `get(String url, String... headerPairs)`, `post(String url, Map<String, String> form, String... headerPairs)`, `login(String host, String username)`, `follow(Page, String username, @Nullable String stopBefore)`, `rewriteAuthorizationRequests(UnaryOperator<URI>)`, `cookie(String host, String name)`, `putCookie(String host, String name, String value)`, `sessionId(String host) → Optional<String>` (`__Host-SESSION` çerezinin Base64 çözülmüş hali, yani `spring_session.session_id`; paylaşılan platform DB'sinde testler kendi oturumlarını bununla hedefler, kullanıcı adıyla değil), `setCookieHeaders(String host) → List<String>`, `appResponses() → List<Page>`, `static MultiValueMap<String, String> query(String url)` (çözülmüş değerler), `static Map<String, Object> json(Page)`.
 
 - [ ] **Step 1: Realm'i yaz.** Realm JSON'unda kullanıcı, organization ve sır yoktur; bunları fixture Admin API ile kurar.
 
@@ -345,7 +348,13 @@ public static Tokens codeFlow(String username, String scope) {
             + "&code_challenge_method=S256&nonce=" + randomUrlSafe(16);
     SpikeBrowser browser = new SpikeBrowser(0);
     SpikeBrowser.Page callback = browser.follow(browser.get(url, "Accept", "text/html"), username, redirectUri);
-    String code = SpikeBrowser.query(callback.location().orElseThrow()).getFirst("code");
+    String code = callback.location()
+            .filter(location -> location.startsWith(redirectUri))
+            .map(location -> SpikeBrowser.query(location).getFirst("code"))
+            // Keycloak refused before the callback (an error page, not a token): say what it showed, it is a finding.
+            .orElseThrow(() -> new IllegalStateException("Keycloak did not reach the callback for " + username + " / "
+                    + scope + ": " + callback.status() + " " + callback.url() + " "
+                    + callback.body().substring(0, Math.min(500, callback.body().length()))));
     Map<String, Object> tokens = tokenRequest(Map.of(
             "grant_type", "authorization_code", "code", code, "redirect_uri", redirectUri, "code_verifier", verifier,
             "client_id", "erp-web", "client_secret", clientSecret("erp-web")));
@@ -462,7 +471,7 @@ public final class SpikeBrowser {
 }
 ```
 
-Kalan kısa metotlar: `get` ve `post` (`send`'i çağırır; form alanları `URLEncoder.encode(…, UTF_8)` ile kodlanır), `exchange` (`IOException` → `UncheckedIOException`; `InterruptedException` → interrupt bayrağını geri koy ve `IllegalStateException` fırlat), `store` (`name=value` ayrıştırılır; `Max-Age=0` silme demektir; ham başlık `setCookieHeaders`'a eklenir; path ve `Domain` jar'da yok sayılır, öznitelikler testlerde ham başlıktan doğrulanır), `cookie`, `putCookie`, `rewriteAuthorizationRequests`, `query` (`UriComponentsBuilder.fromUriString(url).build().getQueryParams()` + değer başına `URLDecoder.decode(…, UTF_8)`), `json` (`JsonParserFactory.getJsonParser().parseMap(page.body())`).
+Kalan kısa metotlar: `get` ve `post` (`send`'i çağırır; form alanları `URLEncoder.encode(…, UTF_8)` ile kodlanır), `exchange` (`IOException` → `UncheckedIOException`; `InterruptedException` → interrupt bayrağını geri koy ve `IllegalStateException` fırlat), `store` (`name=value` ayrıştırılır; `Max-Age=0` silme demektir; ham başlık `setCookieHeaders`'a eklenir; path ve `Domain` jar'da yok sayılır, öznitelikler testlerde ham başlıktan doğrulanır), `cookie`, `putCookie`, `sessionId` (`Base64.getDecoder()`; Spring Session'ın `DefaultCookieSerializer`'ı değeri Base64 yazar), `rewriteAuthorizationRequests`, `query` (`UriComponentsBuilder.fromUriString(url).build().getQueryParams()` + değer başına `URLDecoder.decode(…, UTF_8)`), `json` (`JsonParserFactory.getJsonParser().parseMap(page.body())`).
 
 - [ ] **Step 4: Başarısız testleri yaz.** `KeycloakOrganizationsTests` (birim): `["acme"]` → `{acme}`; `{"acme": {"id": "…"}}` → `{acme}`; `"acme"` → `{acme}`; `null` → `{}`; `[1]` → `{}`; `[""]` → `{}`; `scopeFor("acme")` → `organization:acme`. Öğrenme testleri:
 
@@ -571,7 +580,7 @@ public final class KeycloakOrganizations {
 }
 ```
 
-- [ ] **Step 7: Çalıştır.** `./mvnw -Pspikes -pl spikes/s2-identity test -Dtest='KeycloakOrganizations*'` → Beklenen: PASS. Bir öğrenme testi düşerse gerçek davranışı (ör. üye olmayan için Keycloak'ın hata sayfası göstermesi) bir bulgu olarak not et. Bu davranışa dayanan sonraki testin beklentisini o bulguya göre yaz; Task 4'teki "giriş reddedilir" iddiası hangi yoldan olursa olsun geçerli kalır.
+- [ ] **Step 7: Çalıştır.** `./mvnw -Pspikes -pl spikes/s2-identity test -Dtest='KeycloakOrganizations*'` → Beklenen: PASS. Bir öğrenme testi düşerse gerçek davranışı (ör. üye olmayan için Keycloak'ın hata sayfası göstermesi; `codeFlow`'un istisna mesajı son sayfayı gösterir) bir bulgu olarak not et ve öğrenme testini o davranışı sabitleyecek şekilde yeniden yaz; doğrulamayı geçsin diye bükme. Task 4'teki `assertRejected` iki yolu da kabul eder: değişmez kısmı "acme'de kimliği doğrulanmış oturum yok"tur, 403 + `tenant_mismatch` sadece callback uygulamaya ulaştığında beklenir.
 
 - [ ] **Step 8: Commit**
 
@@ -591,7 +600,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Modify: `spikes/s2-identity/pom.xml` (+ `spring-boot-starter-webmvc`, `spring-boot-starter-actuator`, `spring-boot-starter-security-oauth2-client`, `spring-boot-starter-session-jdbc`), `tenancy/PlatformDataSourceConfiguration` (platform DS'ye `@SpringSessionDataSource`)
 - Create: `identity/IdentityProperties`, `SecurityConfiguration`, `SessionConfiguration`, `BrowserTenantFilter`, `TenantFilterChain`, `TenantOidcUser`, `TenantOidcUserService`, `LazyClientRegistrationRepository`, `DiscardingAuthorizedClientRepository`; `sample/SampleController`, `WhoAmI`; `src/main/resources/application.yaml`
-- Test: `support/SpikeEnvironment`, `SpikeTest`, `SpikeContexts`; `identity/BffLoginTests`, `KeycloakUnavailableTests`, `StartupIsolationTests`
+- Test: `support/SpikeEnvironment`, `SpikeTest`, `SpikeContexts`; `identity/BffLoginTests`, `identity/SessionWiringTests`, `identity/LazyClientRegistrationRepositoryTests`, `KeycloakUnavailableTests`, `StartupIsolationTests`
 
 **Interfaces:**
 - Consumes: Task 1 (`TenantDirectory`, `TenantHost`, `TenantContext`, `TenantDataSourceStandIn`, `@PlatformDb`), Task 2 (`KeycloakOrganizations`, `SpikeKeycloak`, `SpikeBrowser`).
@@ -599,7 +608,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `record IdentityProperties(URI issuerUri, String webClientId, String webClientSecret)` (`erp.identity`).
   - `public final class TenantOidcUser extends DefaultOidcUser`: `TenantKey tenant()`, `getName()` = `<tenant>:<sub>`.
   - `final class TenantFilterChain { static void proceed(TenantKey, FilterChain, ServletRequest, ServletResponse) throws IOException, ServletException; }`
-  - `LazyClientRegistrationRepository.REGISTRATION_ID = "keycloak"`, `static Set<String> scopesWith(String scope)`.
+  - `LazyClientRegistrationRepository.REGISTRATION_ID = "keycloak"`, `static Set<String> scopesWith(String scope)`; kurucular: `LazyClientRegistrationRepository(IdentityProperties)` (discovery = `ClientRegistrations::fromIssuerLocation`) ve testler için paket içi `LazyClientRegistrationRepository(IdentityProperties, Function<String, ClientRegistration.Builder> discovery)`.
   - Uç noktalar: `GET /` → `"ok"`; `GET /api/whoami` → `WhoAmI(String tenant, String name, String authentication)` (`authentication` = kimlik doğrulama sınıfının basit adı); `POST /api/echo` → `{"tenant": "<tenant>"}`.
   - Test: `@SpikeTest` = `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@ContextConfiguration(initializers = SpikeEnvironment.class)`. `SpikeEnvironment` iki fixture'ı açar, tenant tablosundaki üç tenant'ı `SpikeKeycloak.issuer()` ile bir kez kaydeder ve özellikleri ekler. `SpikeContexts.start(String... args)` aynı ortamla `--server.port=0` üzerinde bir bağlam açar; port `local.server.port`'tan okunur.
 
@@ -657,13 +666,14 @@ class BffLoginTests {
                         .doesNotContainIgnoringCase("Domain="));
     }
 
+    /** The browser gets no token at all; the session keeps only the ID token (RP-initiated logout), never access/refresh. */
     @Test
-    void browserIsNeverGivenATokenAndTheSessionHoldsNone() {
+    void browserIsNeverGivenATokenAndTheSessionHoldsOnlyTheIdToken() throws ParseException {
         SpikeBrowser browser = new SpikeBrowser(port);
         browser.login("acme.erp.test", "ayse");
         browser.get("https://acme.erp.test/api/whoami", "Accept", "application/json");
 
-        Pattern jwt = Pattern.compile("eyJ[\\w-]+\\.eyJ[\\w-]+\\.");
+        Pattern jwt = Pattern.compile("eyJ[\\w-]+\\.eyJ[\\w-]+\\.[\\w-]+");
         assertThat(browser.appResponses()).allSatisfy(page -> {
             assertThat(page.body()).doesNotContainPattern(jwt);
             assertThat(page.headers().map().toString()).doesNotContainPattern(jwt);
@@ -672,10 +682,40 @@ class BffLoginTests {
                         .flatMap(page -> page.headers().allValues("Set-Cookie").stream())
                         .map(header -> header.substring(0, header.indexOf('='))))
                 .containsOnly(SESSION);
-        assertThat(SpikeDatabases.platformDatabase()
-                        .sql("select distinct attribute_name from spring_session_attributes")
-                        .query(String.class).list())
+
+        // This browser's session only: the platform DB is shared by every test.
+        List<Map<String, Object>> attributes = SpikeDatabases.platformDatabase()
+                .sql("""
+                        select a.attribute_name, a.attribute_bytes from spring_session_attributes a
+                        join spring_session s on s.primary_id = a.session_primary_id where s.session_id = ?""")
+                .param(browser.sessionId("acme.erp.test").orElseThrow())
+                .query().listOfRows();
+        assertThat(attributes).extracting(row -> (String) row.get("attribute_name"))
                 .noneMatch(name -> name.contains("AuthorizedClient"));
+        List<String> typesInSession = new ArrayList<>();
+        for (Map<String, Object> row : attributes) {
+            Matcher token = jwt.matcher(new String((byte[]) row.get("attribute_bytes"), StandardCharsets.ISO_8859_1));
+            while (token.find()) {
+                typesInSession.add(SignedJWT.parse(token.group()).getJWTClaimsSet().getStringClaim("typ"));
+            }
+        }
+        assertThat(typesInSession).isNotEmpty().containsOnly("ID"); // Keycloak: "ID", "Bearer", "Refresh"
+    }
+
+    /**
+     * Pins design decision 1: from a trusted (internal) address, X-Forwarded-Host overrides Host, and the tenant follows
+     * it. Caddy sends both with the same value; production narrows internal-proxies to Caddy (Phase 1/7).
+     */
+    @Test
+    void forwardedHostFromATrustedProxyDecidesTheTenant() {
+        SpikeBrowser.Page redirect = new SpikeBrowser(port).get(
+                "https://acme.erp.test/oauth2/authorization/keycloak",
+                "Accept", "text/html", "X-Forwarded-Host", "globex.erp.test");
+
+        assertThat(redirect.status()).isEqualTo(302);
+        MultiValueMap<String, String> query = SpikeBrowser.query(redirect.location().orElseThrow());
+        assertThat(query.getFirst("scope").split(" ")).contains("organization:globex");
+        assertThat(query.getFirst("redirect_uri")).isEqualTo("https://globex.erp.test/login/oauth2/code/keycloak");
     }
 
     @Test
@@ -730,6 +770,10 @@ class StartupIsolationTests {
 }
 ```
 
+`SessionWiringTests` (`@SpikeTest`) Tasarım kararı 9'un ikinci tuzağını korur: `applicationTransactionsStayOnTheDefaultDataSource` niteleyicisiz enjekte edilen `TransactionOperations`'ın Boot'un `transactionTemplate`'i olduğunu ve yöneticisinin `DataSourceTransactionManager` olup DataSource'unun `TenantDataSourceStandIn` olduğunu doğrular. Step 5'ten önce de yeşildir; Step 5'te varsayılan aday bir `TransactionOperations` tanımlanırsa kırmızıya döner.
+
+`LazyClientRegistrationRepositoryTests` (birim; sahte `discovery` fonksiyonu ve sayaç): `unknownRegistrationIdIsNullWithoutDiscovery`, `discoveryRunsOnceAndIsCached` (iki çağrı, bir discovery), `failedDiscoveryIsRetriedOnTheNextLogin` (ilk çağrı istisna fırlatır ve önbelleğe bir şey yazılmaz; ikinci çağrı kaydı döner, discovery iki kez çalışmıştır), `registrationRequiresPkce` (`getClientSettings().isRequireProofKey()` true).
+
 - [ ] **Step 2: Çalıştır, düştüğünü gör** (sınıflar yok).
 
 - [ ] **Step 3: Uygula** (`SessionConfiguration` hariç; onu Step 5 ekler).
@@ -747,7 +791,9 @@ spring:
     jdbc.initialize-schema: never # migrations are a separate step (doc §4.6)
     jdbc.cleanup-cron: "-" # K12: expired-session cleanup is a db-scheduler job in Phase 1, not a framework scheduler
 server:
-  forward-headers-strategy: native # X-Forwarded-Proto is trusted only from internal proxies (Tomcat RemoteIpValve)
+  # X-Forwarded-Proto/-Host are trusted from Boot's default internal-proxies (every private range, design decision 1);
+  # production narrows them to Caddy (Phase 1/7).
+  forward-headers-strategy: native
   servlet.session.cookie: # ADR-0006: host-only; with Secure and Path=/ a sibling subdomain cannot set it
     name: __Host-SESSION
     secure: true
@@ -814,15 +860,17 @@ class SecurityConfiguration {
         return new DiscardingAuthorizedClientRepository();
     }
 
-    /** Adds PKCE and the host tenant's organization hint (doc §4.4 rule 1). The hint is not a security boundary. */
+    /**
+     * Adds the host tenant's organization hint (doc §4.4 rule 1). The hint is not a security boundary. PKCE comes from
+     * the registration (requireProofKey, design decision 7).
+     */
     @Bean
     OAuth2AuthorizationRequestResolver authorizationRequestResolver(
             ClientRegistrationRepository registrations, TenantDirectory tenants) {
         DefaultOAuth2AuthorizationRequestResolver resolver = new DefaultOAuth2AuthorizationRequestResolver(
                 registrations, OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI);
-        resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce()
-                .andThen(request -> request.scopes(LazyClientRegistrationRepository.scopesWith(KeycloakOrganizations
-                        .scopeFor(tenants.require(TenantContext.require()).organizationAlias())))));
+        resolver.setAuthorizationRequestCustomizer(request -> request.scopes(LazyClientRegistrationRepository.scopesWith(
+                KeycloakOrganizations.scopeFor(tenants.require(TenantContext.require()).organizationAlias()))));
         return resolver;
     }
 
@@ -903,11 +951,11 @@ public final class TenantOidcUser extends DefaultOidcUser {
 }
 ```
 
-`LazyClientRegistrationRepository` (Tasarım kararı 8): sadece `REGISTRATION_ID` için yanıt verir. İlk çağrıda `ClientRegistrations.fromIssuerLocation(issuerUri)` + `clientId`, `clientSecret`, `scope(SCOPES)` (`openid`, `profile`, `email`), `redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")` ile kaydı kurar. Sonucu `volatile` alanda çift kontrollü kilitle önbelleğe alır. Discovery başarısız olursa önbelleğe bir şey yazmaz; bir sonraki giriş yeniden dener. `static Set<String> scopesWith(String)`, `SCOPES`'a bir scope ekleyip döner; ipucu özelleştiricisi bunu kullanır, böylece scope listesinin tek kaynağı bu sınıftır.
+`LazyClientRegistrationRepository` (Tasarım kararı 8): sadece `REGISTRATION_ID` için yanıt verir. İlk çağrıda `discovery.apply(issuerUri)` (üretimde `ClientRegistrations.fromIssuerLocation`) + `clientId`, `clientSecret`, `scope(SCOPES)` (`openid`, `profile`, `email`), `redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")`, `clientSettings(ClientSettings.builder().requireProofKey(true).build())` ile kaydı kurar. Sonucu `volatile` alanda çift kontrollü kilitle önbelleğe alır. Discovery başarısız olursa önbelleğe bir şey yazmaz; bir sonraki giriş yeniden dener. `static Set<String> scopesWith(String)`, `SCOPES`'a bir scope ekleyip döner; ipucu özelleştiricisi bunu kullanır, böylece scope listesinin tek kaynağı bu sınıftır.
 
 `DiscardingAuthorizedClientRepository`: `loadAuthorizedClient` her zaman `null` döner, `saveAuthorizedClient` ve `removeAuthorizedClient` boştur. Javadoc'u Tasarım kararı 5'i anlatır. `SampleController`: `GET /` → `"ok"`; `GET /api/whoami` → `new WhoAmI(TenantContext.require().value(), authentication.getName(), authentication.getClass().getSimpleName())`; `POST /api/echo` → `Map.of("tenant", TenantContext.require().value())`. `PlatformDataSourceConfiguration`'da platform DS'ye `@SpringSessionDataSource` eklenir: §4.3'e göre oturumlar platform DB'sindedir.
 
-- [ ] **Step 4: Çalıştır ve tuzağı gör.** `./mvnw -Pspikes -pl spikes/s2-identity test -Dtest='BffLoginTests,StartupIsolationTests'` → Beklenen: FAIL. İlk oturum kaydı 500 döner ve `StartupIsolationTests`'te `requests()` ≥ 1 olur; yığında `JdbcIndexedSessionRepository` ve `DataSourceTransactionManager` görünür. Spring Session, JDBC işini platform DS'de yapar ama transaction'ı uygulamanın `PlatformTransactionManager`'ıyla açar. Boot'un bu bean'i varsayılan DataSource'tadır, yani Faz 1'de routing DataSource'tadır. Gözlenen yığını bulgu için not et. Kırmızı görülmezse ("Spring Session 4.1 kendi transaction'ını kuruyor") bunu bulgu olarak yaz ve Step 5'i yine uygula: oturumların transaction sahibi açıkça belirtilmiş olur.
+- [ ] **Step 4: Çalıştır ve tuzağı gör.** `./mvnw -Pspikes -pl spikes/s2-identity test -Dtest='BffLoginTests,StartupIsolationTests,SessionWiringTests'` → Beklenen: `BffLoginTests` ve `StartupIsolationTests` FAIL, `SessionWiringTests` PASS. İlk oturum kaydı 500 döner ve `StartupIsolationTests`'te `requests()` ≥ 1 olur; yığında `JdbcIndexedSessionRepository` ve `DataSourceTransactionManager` görünür. Spring Session, JDBC işini platform DS'de yapar ama kanca verilmediği için transaction'ı bağlamdaki tek `PlatformTransactionManager`'la (`getIfUnique()`) açar. Boot'un bu bean'i varsayılan DataSource'tadır, yani Faz 1'de routing DataSource'tadır. Gözlenen yığını bulgu için not et. Kırmızı görülmezse bunu bulgu olarak yaz (kaynak okumasıyla çelişir, nedeni araştırılır) ve Step 5'i yine uygula: oturumların transaction sahibi açıkça belirtilmiş olur.
 
 - [ ] **Step 5: `SessionConfiguration`'ı ekle.**
 
@@ -916,18 +964,21 @@ public final class TenantOidcUser extends DefaultOidcUser {
 class SessionConfiguration {
 
     /**
-     * Spring Session would otherwise open its transactions with the application's transaction manager, which sits on
-     * the default DataSource: the tenant-routing one from Phase 1 on (design decision 9, ADR-0039).
+     * Spring Session would otherwise open its transactions with the application's only transaction manager, which sits
+     * on the default DataSource: the tenant-routing one from Phase 1 on (design decision 9, ADR-0039). Spring Session
+     * finds this bean by name. It is not a default candidate: a default TransactionOperations would make Boot back off
+     * its own transactionTemplate, and application code would get this platform one.
      */
-    @Bean
-    @SpringSessionTransactionOperations
+    @Bean(name = "springSessionTransactionOperations", defaultCandidate = false)
     TransactionOperations springSessionTransactionOperations(@PlatformDb DataSource platform) {
-        return new TransactionTemplate(new DataSourceTransactionManager(platform));
+        TransactionTemplate transactions = new TransactionTemplate(new DataSourceTransactionManager(platform));
+        transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW); // Spring Session's default
+        return transactions;
     }
 }
 ```
 
-- [ ] **Step 6: Çalıştır, geçtiğini gör.** `./mvnw -Pspikes -pl spikes/s2-identity verify` → `BUILD SUCCESS`; `ModularityTests` yeşil (`identity → tenancy → kernel`, `sample → identity, kernel`).
+- [ ] **Step 6: Çalıştır, geçtiğini gör.** `./mvnw -Pspikes -pl spikes/s2-identity verify` → `BUILD SUCCESS`; `SessionWiringTests` hâlâ yeşil (Boot'un `transactionTemplate`'i yerinde); `ModularityTests` yeşil (`identity → tenancy → kernel`, `sample → identity, kernel`). Bean adla bulunamazsa Spring Session tek TM'e döner ve `StartupIsolationTests` sayacı bunu yakalar (`defaultCandidate = false` bir bean'in `@Qualifier` adıyla enjekte edildiği varsayımı burada doğrulanır).
 
 - [ ] **Step 7: Commit**
 
@@ -945,12 +996,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Risk:** Bu, §4.4 madde 1'in güvenlik sınırıdır. İpucu istemcinin elindedir; sınırı ID token'daki iddia ve oturum principal'ının tenant'ı çizer.
 
 **Files:**
-- Modify: `identity/TenantOidcUserService` (iddia kontrolü), `identity/BrowserTenantFilter` (oturum kontrolü), `identity/SessionConfiguration` (okunamayan oturum)
+- Modify: `identity/TenantOidcUserService` (iddia kontrolü), `identity/BrowserTenantFilter` (oturum kontrolü)
 - Test: `identity/OrganizationClaimCheckTests`, `identity/SessionTenantBindingTests`
 
 **Interfaces:**
 - Consumes: Task 3.
-- Produces: giriş hatası 403 döner ve gövdesi `tenant_mismatch` olur; başka tenant'ın oturumu 401 alır; askıdaki tenant 503 alır; okunamayan oturum 401 alır.
+- Produces: giriş hatası 403 döner ve gövdesi `tenant_mismatch` olur; başka tenant'ın oturumu 401 alır; askıdaki tenant 503 alır.
 
 - [ ] **Step 1: Başarısız testleri yaz.**
 
@@ -963,7 +1014,15 @@ class OrganizationClaimCheckTests {
 
     @Test
     void memberOfAnotherOrganizationCannotLogInHere() {
-        assertRejected(new SpikeBrowser(port), "zeynep");
+        SpikeBrowser browser = new SpikeBrowser(port);
+        SpikeBrowser.Page result = browser.login("acme.erp.test", "zeynep");
+
+        // Keycloak may refuse a non-member itself (an error page) or issue a token without acme (learning test, Task 2).
+        // Either way no acme session exists; if the callback reached the application, the ID token check refused it.
+        if (result.url().getHost().equals("acme.erp.test")) {
+            assertRejectedByTheApplication(result);
+        }
+        assertNoSession(browser);
     }
 
     @Test
@@ -988,11 +1047,18 @@ class OrganizationClaimCheckTests {
         assertRejected(browser, "mm");
     }
 
+    /** The tampered hint names mm's own organizations (or none), so Keycloak issues a token: the app must refuse it. */
     private static void assertRejected(SpikeBrowser browser, String username) {
-        SpikeBrowser.Page result = browser.login("acme.erp.test", username);
+        assertRejectedByTheApplication(browser.login("acme.erp.test", username));
+        assertNoSession(browser);
+    }
 
+    private static void assertRejectedByTheApplication(SpikeBrowser.Page result) {
         assertThat(result.status()).isEqualTo(403);
         assertThat(result.body()).isEqualTo("tenant_mismatch");
+    }
+
+    private static void assertNoSession(SpikeBrowser browser) {
         assertThat(browser.get("https://acme.erp.test/api/whoami", "Accept", "application/json").status())
                 .isEqualTo(401);
     }
@@ -1014,12 +1080,11 @@ class OrganizationClaimCheckTests {
 | Test | Senaryo | Kabul |
 |---|---|---|
 | `sessionCookieReplayedOnAnotherTenantsHostIs401` | `ayse` acme'de giriş yapar; acme'nin `__Host-SESSION` değeri `putCookie("globex.erp.test", …)` ile globex'e taşınır | globex `/api/whoami` 401; acme `/api/whoami` 200 (oturum silinmedi) |
-| `oneUserGetsOneIndependentSessionPerTenant` | `mm` önce acme'de, sonra globex'te giriş yapar (ikincisi Keycloak SSO ile formsuz) | İki host'ta `whoami.name` `acme:<sub>` ve `globex:<sub>` olur (aynı `sub`); çerez değerleri farklıdır; acme çerezi globex'te 401 alır; `FindByIndexNameSessionRepository#findByPrincipalName("acme:" + sub)` tek oturum döner ve o oturum globex'inki değildir |
-| `callbackReplayedOnAnotherHostDoesNotLogIn` | `mm` acme'de girişe başlar; `follow(…, "mm", "https://acme.erp.test/login/oauth2/code/")` callback'ten önce durur; acme'nin giriş öncesi çerezi globex'e taşınır ve aynı callback yolu ile sorgusu globex host'unda istenir | Durum 403; globex `/api/whoami` 401 |
+| `oneUserGetsOneIndependentSessionPerTenant` | `mm` önce acme'de, sonra globex'te giriş yapar (ikincisi Keycloak SSO ile formsuz) | İki host'ta `whoami.name` `acme:<sub>` ve `globex:<sub>` olur (aynı `sub`); çerez değerleri farklıdır; acme çerezi globex'te 401 alır; `FindByIndexNameSessionRepository#findByPrincipalName("acme:" + sub)` bu tarayıcının acme oturumunu (`sessionId("acme.erp.test")`) içerir, globex oturumunu içermez. Oturum sayısı doğrulanmaz: platform DB'si testler arasında ortaktır ve `mm` başka testlerde de acme'ye giriş yapar |
+| `callbackReplayedOnAnotherHostDoesNotLogIn` | `mm` acme'de girişe başlar; `follow(…, "mm", "https://acme.erp.test/login/oauth2/code/")` callback'ten önce durur; acme'nin giriş öncesi çerezi globex'e taşınır ve aynı callback yolu ile sorgusu globex host'unda istenir | Durum 403, gövde `tenant_mismatch` (onu iddia kontrolü durdurur, Spring değil: Tasarım kararı 7); globex `/api/whoami` 401 |
 | `suspendedTenantRefusesSessionsAndLogins` | `ipek` initech'te giriş yapar; ardından `SpikeDatabases.setStatus(initech, SUSPENDED)` (`finally` bloğunda `ACTIVE`'e döner) | `/api/whoami` 503; `/oauth2/authorization/keycloak` 503 ve `Location` yok |
-| `unreadableSessionMeansLoggedOutNotServerError` | `ayse` acme'de giriş yapar; süper kullanıcı `update spring_session_attributes set attribute_bytes = decode('deadbeef', 'hex') where attribute_name = 'SPRING_SECURITY_CONTEXT' and session_primary_id = (select primary_id from spring_session where principal_name = ?)` çalıştırır | `/api/whoami` 401 döner (500 değil) |
 
-- [ ] **Step 2: Çalıştır, düştüğünü gör.** Beklenen: `OrganizationClaimCheckTests`'in dört testi düşer (giriş başarılı olur, durum 200); `sessionCookieReplayed…` ve `oneUser…` düşer (globex 200 döner, üstelik acme kimliğiyle); `unreadableSession…` 500 ile düşer. `suspended…` ve `callbackReplayed…` geçebilir: ilki Task 3'teki 503'ü, ikincisi Spring'in `redirect_uri` doğrulamasını kanıtlar.
+- [ ] **Step 2: Çalıştır, düştüğünü gör.** Beklenen: `OrganizationClaimCheckTests`'in mm'li üç testi düşer (giriş başarılı olur, durum 200); zeynep'li test, Keycloak token verdiyse düşer, kendisi reddettiyse geçer (Task 2'deki öğrenme testi hangisi olduğunu söyler). `sessionCookieReplayed…` ve `oneUser…` düşer (globex 200 döner, üstelik acme kimliğiyle). `callbackReplayed…` **düşer**: Spring Security 7.1.1 callback'te `redirect_uri`'yi karşılaştırmaz, kodu acme'nin `redirect_uri`'siyle takas eder ve globex'te acme üyesinin oturumu açılır. Bu, Task 3 sonunda bilinen bir tenant-arası açıktır ve sadece Step 3'teki iddia kontrolüyle kapanır; gözlenen sonucu bulgu için not et. `suspended…` geçebilir (Task 3'teki 503).
 
 - [ ] **Step 3: İddia kontrolünü ekle** (`TenantOidcUserService#loadUser`):
 
@@ -1060,35 +1125,11 @@ class OrganizationClaimCheckTests {
     }
 ```
 
-Kimlik doğrulaması olan ama principal'ı `TenantOidcUser` olmayan bir oturum da reddedilir (kapalı hata). `LOG` bu sınıfta ve `SessionConfiguration`'da birer SLF4J `Logger`'dır.
+Kimlik doğrulaması olan ama principal'ı `TenantOidcUser` olmayan bir oturum da reddedilir (kapalı hata). `LOG` bu sınıfta bir SLF4J `Logger`'dır.
 
-- [ ] **Step 5: Okunamayan oturumu düşür** (`SessionConfiguration`'a eklenir):
+- [ ] **Step 5: Çalıştır, geçtiğini gör.** `./mvnw -Pspikes -pl spikes/s2-identity verify` → `BUILD SUCCESS`.
 
-```java
-    /**
-     * An attribute that no longer deserializes (another instance on another Spring Security minor version, corrupt row)
-     * reads as absent: the user logs in again instead of getting a 500 (design decision 10).
-     */
-    @Bean
-    SessionRepositoryCustomizer<JdbcIndexedSessionRepository> unreadableSessionAttributesAreDropped() {
-        GenericConversionService conversion = new GenericConversionService();
-        conversion.addConverter(Object.class, byte[].class, new SerializingConverter());
-        DeserializingConverter deserializer = new DeserializingConverter(SessionConfiguration.class.getClassLoader());
-        conversion.addConverter(byte[].class, Object.class, bytes -> {
-            try {
-                return deserializer.convert(bytes);
-            } catch (SerializationFailedException e) {
-                LOG.warn("Dropping an unreadable session attribute: {}", e.getMessage());
-                return null;
-            }
-        });
-        return repository -> repository.setConversionService(conversion);
-    }
-```
-
-- [ ] **Step 6: Çalıştır, geçtiğini gör.** `./mvnw -Pspikes -pl spikes/s2-identity verify` → `BUILD SUCCESS`.
-
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add spikes/s2-identity/src
@@ -1116,6 +1157,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | Test | İstek | Kabul |
 |---|---|---|
 | `bootstrapGivesTheSpaTenantUserAndAMaskedCsrfToken` | `GET /bootstrap` iki kez | 200; `tenant` = `acme`; `csrfHeader` = `X-CSRF-TOKEN`; token'lar boş değil ve iki çağrıda farklı (XOR maskesi); ikisi de kabul ediliyor |
+| `bootstrapWithoutASessionIs401` | Girişsiz yeni tarayıcıyla `GET /bootstrap` (`Accept: application/json`) | 401, `Location` yok (§9.7: SPA 401'i görüp girişe yönlendirir) |
 | `stateChangingRequestWithoutTheTokenIs403` | `POST /api/echo` | 403 |
 | `stateChangingRequestWithTheBootstrapTokenPasses` | `POST /api/echo` + `X-CSRF-TOKEN` | 200, `{"tenant":"acme"}` |
 | `forgedDoubleSubmitCookieIsUseless` | `putCookie("acme.erp.test", "XSRF-TOKEN", "forged")` + `X-XSRF-TOKEN: forged` + form alanı `_csrf=forged` | 403 (Tasarım kararı 6'nın gerekçesi) |
@@ -1126,10 +1168,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | Test | Senaryo | Kabul |
 |---|---|---|
 | `logoutWithoutTheTokenIs403AndKeepsTheSession` | `POST /logout` | 403; `/api/whoami` 200 |
-| `logoutEndsTheSessionAndHandsOverToKeycloak` | `POST /logout` + token | 302; `Location` Keycloak'ın `…/protocol/openid-connect/logout` adresi, `id_token_hint` dolu, `post_logout_redirect_uri` = `https://acme.erp.test/`; `spring_session`'da `acme:<sub>` satırı yok; eski çerezle `/api/whoami` 401; `Location` izlenince Keycloak `https://acme.erp.test/`'e döner |
+| `logoutEndsTheSessionAndHandsOverToKeycloak` | `POST /logout` + token | 302; `Location` Keycloak'ın `…/protocol/openid-connect/logout` adresi, `id_token_hint` dolu, `post_logout_redirect_uri` = `https://acme.erp.test/`; `spring_session`'da bu oturumun satırı (çıkıştan önce okunan `sessionId("acme.erp.test")`) yok (kullanıcının başka testlerden kalan oturumları doğrulanmaz, platform DB'si ortaktır); eski çerezle `/api/whoami` 401; `Location` izlenince Keycloak `https://acme.erp.test/`'e döner |
 | `logoutOnOneTenantLeavesTheOtherTenantsSessionAlone` | `mm` acme ve globex'te giriş yapar, acme'den çıkar | globex `/api/whoami` hâlâ 200. Bu davranış sabitlenir ve bulgu olur: Keycloak SSO bitti ama globex'teki uygulama oturumu kendi çıkışına ya da zaman aşımına kadar yaşar; back-channel logout kararı Faz 3'tedir. |
 
-- [ ] **Step 2: Çalıştır, düştüğünü gör** (`/bootstrap` 404; çıkış Keycloak'a gitmez, `/oauth2/authorization/keycloak?logout` adresine yönlenir).
+- [ ] **Step 2: Çalıştır, düştüğünü gör** (`/bootstrap` 404; çıkış Keycloak'a gitmez, `/oauth2/authorization/keycloak?logout` adresine yönlenir). `bootstrapWithoutASessionIs401` şimdiden geçebilir: tarayıcı zinciri Task 3'ten beri `/bootstrap`'a oturumsuz 401 verir.
 
 - [ ] **Step 3: Uygula.**
 
@@ -1187,7 +1229,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `tokenWithTwoOrganizationsIs401` | `multi-integration` | 401 |
 | `tokenForAnUnregisteredOrganizationIs401` | `unknown-integration` | 401 |
 | `tokenWithoutTheApiAudienceIs401` | `noaud-integration` | 401 |
-| `tokenSignedByAnotherIssuerIs401` | Nimbus ile üretilmiş RS256 token (`RSAKeyGenerator(2048)`), `iss` = `http://evil.test/realms/erp`, `aud` = `erp-api`, `organization` = `["acme"]`, 5 dk geçerli | 401 |
+| `tokenSignedWithAForeignKeyIs401` | Nimbus ile üretilmiş RS256 token (`RSAKeyGenerator(2048)`), `iss` = `http://evil.test/realms/erp`, `aud` = `erp-api`, `organization` = `["acme"]`, 5 dk geçerli | 401. İmza (realm'in JWKS'inde olmayan anahtar) durdurur; issuer doğrulaması ayrıca kanıtlanmaz, ayrı realm konusu Tasarım kararı 2'dedir |
+| `invalidBearerTokenDoesNotFallBackToTheSession` | `ayse` acme'de giriş yapar; aynı tarayıcıyla `Authorization: Bearer not-a-jwt` ile `https://acme.erp.test/api/whoami` | 401, `WWW-Authenticate` `invalid_token` içerir; istek tarayıcı zincirine düşüp oturumla 200 dönmez |
 | `tokenOnAnotherTenantsHostIs403` | `acme-integration`; istek `https://globex.erp.test/api/whoami`'ye ve sonra `https://acme.erp.test/api/whoami`'ye | globex 403; acme 200 |
 | `suspendedTenantsTokenIs503` | `initech-integration`; `setStatus(initech, SUSPENDED)` (`finally` bloğunda `ACTIVE`) | 503 |
 | `bearerRequestIgnoresAnySessionCookie` | `ayse` acme'de giriş yapar; aynı tarayıcıyla `acme-integration` token'ı `https://acme.erp.test/api/whoami`'ye gönderilir | `authentication` = `TenantJwtAuthentication`; `name` `ayse`'nin `acme:<sub>` değeri değil; `Set-Cookie` yok |
@@ -1315,7 +1358,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `docs/adr/0005-keycloak-organizations.md`, `0006-bff-oturum-cerezi.md`, `0039-spring-session-jdbc.md`, `0040-uc-kimlik-yolu.md`, `0004-platform-veritabani.md`, `0024-onprem-linux-compose-erpctl.md`, `docs/adr/README.md`
 
 **Interfaces:**
-- Consumes: Task 1–6'nın yeşil test çalıştırması ve görevlerde not edilen gözlemler (Task 2 Step 7, Task 3 Step 4).
+- Consumes: Task 1–6'nın yeşil test çalıştırması ve görevlerde not edilen gözlemler (Task 2 Step 7, Task 3 Step 4, Task 4 Step 2).
 - Produces: S2 sonucu ADR'lerde; Faz 1/2/3 girdileri `docs/spikes/s2-identity.md`'de.
 
 - [ ] **Step 1: Kanıtı topla.**
@@ -1329,50 +1372,57 @@ Beklenen: son `Tests run:` satırında `Failures: 0, Errors: 0`, `BUILD SUCCESS`
 
 - [ ] **Step 2: `docs/spikes/s2-identity.md`'yi yaz.** Düzen `s1-tenancy.md` ile aynıdır: başlık tablosu (Kapsam, Kod, Çalıştırma, Sonuç, İlgili ADR'ler), Kapsam dışı, Kurulum, Kanıt tablosu, Bulgular, Faz 1/2/3 girdileri.
 
-*Kapsam dışı:* cihaz kimliği yolu (ADR-0040 yol 3, Faz 3), mobil kullanıcı token'ı (public client + PKCE, Faz 3), `user_account` kaydı ve `sub` bağlama (Faz 3), personel realm'i ve impersonation (ADR-0042, Faz 3), ayrı realm istisnasının uçtan uca kurulumu (sadece `(issuer, alias)` anahtarı test edildi), back-channel logout, provisioning adaptörü (Faz 2), host araması için önbellek (Faz 2), gerçek TLS ve tarayıcı E2E'si (Faz 3).
+*Kapsam dışı:* cihaz kimliği yolu (ADR-0040 yol 3, Faz 3), mobil kullanıcı token'ı (public client + PKCE, Faz 3), `user_account` kaydı ve `sub` bağlama (Faz 3), personel realm'i ve impersonation (ADR-0042, Faz 3), ayrı realm istisnasının uçtan uca kurulumu (sadece `(issuer, alias)` anahtarı test edildi; zincirlerin çoklu issuer ihtiyacı bulgu olarak yazılır), back-channel logout, oturumun mutlak ömrü ve IdP iptalinin oturuma yansıması (Faz 3), okunamayan oturum ve serileştirme uyumluluğu (Tasarım kararı 10, Faz 1), Keycloak'ın dış (front-channel) ve iç (back-channel) adresinin ayrışması (compose'da uygulama Keycloak'a iç adresle gider, issuer dış adrestir; spike iki tarafta aynı adresi kullanır, Faz 1 compose'unda çözülür), `internal-proxies`'in daraltılması (Faz 1/7), provisioning adaptörü (Faz 2), host araması için önbellek (Faz 2), gerçek TLS ve tarayıcı E2E'si (Faz 3).
 
 *Kanıt tablosu* (her satır: iddia | test | sonuç):
 
 | # | İddia | Test |
 |---|---|---|
 | 1 | Keycloak 26.8: `organization:<alias>` ipucu ID ve access token'a sadece o organization'ı koyar; üye olmayana iddia gelmez; `*` bütün üyelikleri koyar; sabit eşleyici service account'a tenant iddiası ve audience verir | `KeycloakOrganizationsLearningTests` |
-| 2 | Giriş, host'un tenant'ının ipucu, PKCE ve portsuz tenant `redirect_uri`'siyle başlar; kayıtsız host 404 döner | `BffLoginTests` |
-| 3 | Kurcalanmış, silinmiş ya da joker ipucu ve üye olmayan kullanıcı girişte 403 alır; oturum oluşmaz | `OrganizationClaimCheckTests` |
-| 4 | Oturum `(kullanıcı, tenant)`'a bağlıdır: başka tenant'ın host'unda 401; mali müşavirin iki bağımsız oturumu olur; principal index'i tenant'a göre bulur; callback başka host'ta tekrar oynatılamaz; askıdaki tenant 503 alır | `SessionTenantBindingTests` |
-| 5 | Çerez `__Host-`, `Secure`, `HttpOnly`, `SameSite=Lax`'tır, `Domain` yoktur; oturum kimliği girişte değişir; tarayıcıya ve oturuma token girmez | `BffLoginTests` |
-| 6 | Oturumlar platform DB'sinde, platform transaction'ıyla tutulur; okunamayan oturum 401 üretir | `BffLoginTests`, `SessionTenantBindingTests`, `StartupIsolationTests` |
-| 7 | CSRF: token'sız ve başka oturumun token'ıyla 403; basılmış double-submit çerezi işe yaramaz | `CsrfTests` |
+| 2 | Giriş, host'un tenant'ının ipucu, PKCE (kayıttan) ve portsuz tenant `redirect_uri`'siyle başlar; kayıtsız host 404 döner; güvenilen adresten gelen `X-Forwarded-Host` tenant'ı belirler | `BffLoginTests` |
+| 3 | Kurcalanmış, silinmiş ya da joker ipucuyla giriş 403 alır; üye olmayan kullanıcı acme'de oturum açamaz (Keycloak'ın mı uygulamanın mı reddettiği bulguda); oturum oluşmaz | `OrganizationClaimCheckTests` |
+| 4 | Oturum `(kullanıcı, tenant)`'a bağlıdır: başka tenant'ın host'unda 401; mali müşavirin iki bağımsız oturumu olur; principal index'i tenant'a göre bulur; callback başka host'ta tekrar oynatılamaz (iddia kontrolüyle; Spring bunu durdurmaz); askıdaki tenant 503 alır | `SessionTenantBindingTests` |
+| 5 | Çerez `__Host-`, `Secure`, `HttpOnly`, `SameSite=Lax`'tır, `Domain` yoktur; oturum kimliği girişte değişir; tarayıcıya token girmez; oturumda access ve refresh token yoktur, yalnızca ID token vardır | `BffLoginTests` |
+| 6 | Oturumlar platform DB'sinde, platform transaction'ıyla tutulur; uygulamanın `TransactionTemplate`'i varsayılan DataSource'ta kalır | `BffLoginTests`, `SessionWiringTests`, `StartupIsolationTests` |
+| 7 | CSRF: token'sız ve başka oturumun token'ıyla 403; basılmış double-submit çerezi işe yaramaz; oturumsuz `/bootstrap` 401 | `CsrfTests` |
 | 8 | Çıkış CSRF ister, oturumu siler ve Keycloak'a devreder; diğer tenant'ın oturumu yaşar | `LogoutTests` |
-| 9 | Bearer: `(iss, organization)` → tenant; iddiası yok, iki organization, kayıtsız organization, audience yok ya da yabancı issuer → 401; başka tenant host'u → 403; askıda → 503; oturum okunmaz ve yaratılmaz; CSRF yok | `BearerChainTests`, `TenantJwtAuthenticationConverterTests` |
-| 10 | Açılış, giriş, bearer çağrısı ve kapanış boyunca tenant DataSource'una 0 istek; Keycloak yokken uygulama açılır ve hazır olur | `StartupIsolationTests`, `KeycloakUnavailableTests` |
+| 9 | Bearer: `(iss, organization)` → tenant; iddiası yok, iki organization, kayıtsız organization, audience yok ya da yabancı anahtarla imzalı → 401; geçersiz token oturum çerezine düşmez (401); başka tenant host'u → 403; askıda → 503; oturum yaratılmaz ve kimlik oturumdan alınmaz; CSRF yok | `BearerChainTests`, `TenantJwtAuthenticationConverterTests` |
+| 10 | Açılış, giriş, bearer çağrısı ve kapanış boyunca tenant DataSource'una 0 istek; Keycloak yokken uygulama açılır ve hazır olur; başarısız discovery sonraki girişte yeniden denenir | `StartupIsolationTests`, `KeycloakUnavailableTests`, `LazyClientRegistrationRepositoryTests` |
 
 *Bulgular:* her biri gözlenen davranış + karar + kanıt olarak yazılır. En az şu konular ele alınır:
 - Öğrenme testlerinde gözlenen gerçek davranış: iddianın şekli, ID ve access token'daki yeri, üye olmayan için ne olduğu.
-- Spring Session'ın transaction yöneticisi tuzağı (Task 3 Step 4'te kırmızı görüldü mü, yığın).
-- Okunamayan oturum ve sürüm geçişi (Tasarım kararı 10).
-- Boot'un `issuer-uri` ile açılışta discovery yapması (Tasarım kararı 8).
+- Spring Session'ın transaction yöneticisi tuzağı (Task 3 Step 4'te kırmızı görüldü mü, yığın) ve ikinci tuzak: varsayılan aday bir `TransactionOperations` Boot'un `transactionTemplate`'ini bastırır (Tasarım kararı 9).
+- Callback'in başka host'ta tekrar oynatılmasına karşı tek savunmanın ID token iddia kontrolü olması (Task 4 Step 2'de kırmızı görüldü mü; Tasarım kararı 7). Faz 1: kontrol ve regresyon testi zorunlu.
+- Ayrı realm istisnası: çözümleyici değişmez, zincirler değişir (bearer'da `JwtIssuerAuthenticationManagerResolver`, tarayıcıda tenant'ın issuer'ına göre registration; Tasarım kararı 2). ADR-0005'in "kod değişmez" cümlesinin düzeltilmesi.
+- Oturumda yalnızca ID token (e-posta ve adla birlikte) durması; RP-initiated logout'un buna bağlı olması (Tasarım kararı 5).
+- Oturum ömrünün IdP'den kopuk olması: refresh yok, `spring.session.timeout` sadece boşta kalma süresi, mutlak ömür yok; kullanıcının devre dışı bırakılması oturuma yansımaz; principal adı `<tenant>:<sub>` olduğu için bir kullanıcının bütün tenant'lardaki oturumları index'le tek seferde bulunamaz (Faz 3 kararı: `auth_time` ile mutlak ömür, `sub`'a göre oturum bulma, back-channel logout).
+- İstek başına platform DB maliyeti: host araması (önbelleksiz), oturum okuma ve `JdbcSession.setLastAccessedTime`'ın her istekte işaretlediği `UPDATE spring_session`; her giriş başlangıcı kimliği doğrulanmamış bir oturum satırı yazar (Faz 1 temizlik işi, Faz 2 host önbelleği, Faz 7 `/oauth2/authorization/*` oran sınırı). ADR-0039'un "Olumsuz" satırına girer.
+- Oturum serileştirmesi: Spring Security 7.1.1 UID'leri sabit (620L), minör geçiş oturumu bozmaz; kendi sınıflarımız için Faz 1 notu (Tasarım kararı 10).
+- Boot'un `issuer-uri` ile açılışta discovery yapması (Tasarım kararı 8); `SupplierJwtDecoder` ve `LazyClientRegistrationRepository` başarısız discovery'yi önbelleğe almaz.
+- PKCE: Spring Security 7.1.1 gizli istemcide PKCE'yi varsayılan olarak eklemez; `requireProofKey(true)` (Tasarım kararı 7).
+- Önyükleme yolu: §8.1 `GET /api/v1/bootstrap` diyor ve Faz 3'teki mobil (bearer) istemci de önyükleme isteyecek; spike `/bootstrap`'ı CSRF alanı yüzünden tarayıcıya özel tuttu. Faz 3'te yol §8.1'e alınır; bearer'da CSRF alanları olmadan açılıp açılmayacağı açık sorudur.
 - Keycloak'ın alt alan adı jokeri kabul etmemesi: her tenant host'u `erp-web`'in redirect ve post-logout URI'lerine provisioning ile eklenmeli (Faz 2). Yüzlerce tenant'ta istemci yapılandırmasının büyümesi bir izleme konusudur.
 - Organization bağının `tenant`'ta durması (§4.3'e doküman önerisi).
 - `TenantKey`'in `_` içerebilmesine karşın DNS etiketinin içerememesi: Faz 2'de ya `TenantKey`'den `_` çıkar ya da host anahtardan türetilmez.
 - Çıkışın diğer tenant oturumlarını bitirmemesi (Faz 3: back-channel logout ya da principal index'iyle silme).
 - `InMemoryOAuth2AuthorizedClientService` varsayılanı (Tasarım kararı 5).
-- `forward-headers-strategy: native` ve `X-Forwarded-Proto` güveni (ADR-0024).
+- `forward-headers-strategy: native`: Boot 4.1.1 varsayılanlarıyla `X-Forwarded-Proto` ve `X-Forwarded-Host`'a bütün özel ağ aralıklarından güvenilir; tenant `X-Forwarded-Host`'u izler. On-prem LAN'daki her makine güvenilen proxy sayılır; Faz 1/7'de `internal-proxies` Caddy'ye daraltılır ve uygulama portu dışarı açılmaz (ADR-0024, Tasarım kararı 1).
 - CSRF seçimi ve cookie tossing (Tasarım kararı 6).
 - `cleanup-cron` kapalı: süresi dolan oturumları db-scheduler işi silmeli (Faz 1).
 - S1 açık madde 1'in kısmi kanıtı: web, güvenlik, oturum ve actuator tenant'sız bağlantı istemiyor; JPA, jOOQ ve Modulith ile birlikte servlet açılışı Faz 1'de kalıyor.
 
-*Faz 1 girdileri:* BFF yapılandırması (yukarıdaki YAML parçaları), `TenantOidcUser`, `TenantFilterChain`, iki zincir + actuator zinciri, `SessionConfiguration`, açılış izolasyon testinin web sürümü. *Faz 2:* provisioning'de redirect ve post-logout URI kaydı, host araması önbelleği, `tenant_domain` şeması. *Faz 3:* cihaz zinciri, mobil token, organization'dan çıkarmada oturum silme, back-channel logout, tarayıcıda token olmadığını doğrulayan Playwright testi.
+*Faz 1 girdileri:* BFF yapılandırması (yukarıdaki YAML parçaları), `TenantOidcUser`, `TenantFilterChain`, iki zincir + actuator zinciri, `SessionConfiguration` (`springSessionTransactionOperations`, `defaultCandidate = false`) ve `SessionWiringTests`, iddia kontrolü ile callback tekrar oynatma regresyon testi, açılış izolasyon testinin web sürümü, `internal-proxies`'in Caddy'ye daraltılması, Keycloak'ın dış ve iç adresi (compose), süresi dolan oturum temizliği, oturum serileştirme notu (Tasarım kararı 10). *Faz 2:* provisioning'de redirect ve post-logout URI kaydı, host araması önbelleği, `tenant_domain` şeması. *Faz 3:* cihaz zinciri, mobil token, organization'dan çıkarmada oturum silme, back-channel logout, oturumun mutlak ömrü, `/api/v1/bootstrap` ve bearer'daki durumu, tarayıcıda token olmadığını doğrulayan Playwright testi. *İlk ayrı realm müşterisiyle:* zincirlerde çoklu issuer.
 
-- [ ] **Step 3: ADR'leri güncelle.** Kural, ADR README'deki "Durum sözlüğü"dür ve S1 Task 10'daki gibi uygulanır: doğrulama kararı olduğu gibi desteklediyse **Kabul edildi**, karar metni değişmek zorundaysa **Değişti**. "Karar" metnine dokunulmaz; sadece "Durum" satırı değişir ve "Doğrulama"nın sonuna `**S2 sonucu (<TARİH>, `<COMMIT>`):** …` paragrafı eklenir. Task 1–6 yeşilse ve öğrenme testleri beklendiği gibi geçtiyse geçerli durumlar şunlardır:
+- [ ] **Step 3: ADR'leri güncelle.** Kural, ADR README'deki "Durum sözlüğü"dür ve S1 Task 10'daki gibi uygulanır: doğrulama kararı olduğu gibi desteklediyse **Kabul edildi**, karar metni değişmek zorundaysa **Değişti**. "Karar" metnine dokunulmaz; sadece "Durum" satırı değişir ve "Doğrulama"nın sonuna `**S2 sonucu (<TARİH>, `<COMMIT>`):** …` paragrafı eklenir. **Değişti** durumunda bu paragraf neyin değiştiğini ve nedenini yazar (README: "ne değiştiği ve nedeni `Doğrulama` bölümündedir"). Task 1–6 yeşilse ve öğrenme testleri beklendiği gibi geçtiyse geçerli durumlar şunlardır:
 
 | ADR | Durum | S2 paragrafının içeriği |
 |---|---|---|
-| 0005 | Kabul edildi | Öğrenme testleri 1–4'ün sonucu; kontrolün yeri (ID token, `iss` + tam organization kümesi); redirect ve post-logout URI'lerinin tenant host'u başına kaydı; alias biçimi; `(issuer, alias)` anahtarı. Ayrıntı için bulgulara bağlantı. |
-| 0006 | Kabul edildi | Çerez öznitelikleri; tarayıcıda ve oturumda token olmaması; her istekte host ↔ principal tenant kontrolü (401); CSRF'in oturum token'ı olması ve double-submit'in neden seçilmediği; `forward-headers-strategy: native`. |
-| 0039 | Kabul edildi | `@SpringSessionDataSource` + `@SpringSessionTransactionOperations` zorunluluğu (gözlenen tuzak); okunamayan oturumun düşürülmesi; principal index'i `<tenant>:<sub>`; `cleanup-cron` kapalı ve temizliğin db-scheduler'a geçmesi. |
-| 0040 | Önerildi kalır | Yol 1 ve 2 doğrulandı (iki zincir, bearer'da `(iss, organization)`, audience, tenant host kuralı); yol 3 (cihaz) Faz 3'te. |
+| 0005 | **Değişti** | Değişen: "Çözümleyici `(issuer, organization) → tenant` eşlemesini kullandığı için kod değişmez" cümlesi. Çözümleyici değişmez, ama zincirler tek issuer'a güvenir; ayrı realm istisnası bearer'da çoklu issuer çözümleyicisi (`JwtIssuerAuthenticationManagerResolver`, güvenilen issuer'lar = `tenant.oidc_issuer`) ve tarayıcıda tenant'ın issuer'ına göre client registration ister; bu iş ilk ayrı realm müşterisiyle gelir. Kararın geri kalanı doğrulandı: öğrenme testleri 1–4'ün sonucu; kontrolün yeri (ID token, `iss` + tam organization kümesi) ve callback tekrar oynatmaya karşı tek savunma olması; redirect ve post-logout URI'lerinin tenant host'u başına kaydı; alias biçimi; `(issuer, alias)` anahtarı. Ayrıntı için bulgulara bağlantı. |
+| 0006 | Kabul edildi | Çerez öznitelikleri; tarayıcıda token olmaması, oturumda yalnızca ID token (access/refresh yok); her istekte host ↔ principal tenant kontrolü (401); CSRF'in oturum token'ı olması ve double-submit'in neden seçilmediği; oturumun mutlak ömrünün Faz 3 kararı olarak açık kaldığı. |
+| 0039 | Kabul edildi | `@SpringSessionDataSource` + `springSessionTransactionOperations` (`defaultCandidate = false`, `REQUIRES_NEW`) zorunluluğu (gözlenen tuzak ve Boot'un `transactionTemplate`'ini bastırma tuzağı); principal index'i `<tenant>:<sub>`; `cleanup-cron` kapalı ve temizliğin db-scheduler'a geçmesi; olumsuz sonuç: her istekte platform DB'sine `UPDATE spring_session` ve her giriş başlangıcında kimliksiz oturum satırı. |
+| 0040 | Önerildi kalır | Yol 1 ve 2 doğrulandı (iki zincir, bearer'da `(iss, organization)`, audience, tenant host kuralı, geçersiz bearer'ın çereze düşmemesi); yol 3 (cihaz) Faz 3'te. |
 | 0004 | Önerildi kalır | Not: organization bağı `tenant`'ta, `tenant_domain` sadece host eşlemesi; oturumlar platform DB'sinde doğrulandı. |
-| 0024 | Önerildi kalır | Not: `__Host-` + `Secure` için uygulama `X-Forwarded-Proto`'ya sadece güvenilen proxy'den güvenir (`server.forward-headers-strategy: native`); Caddy `Host`'u korur. |
+| 0024 | Önerildi kalır | Not: `__Host-` + `Secure` için uygulama `X-Forwarded-Proto`'ya Tomcat `RemoteIpValve` üzerinden güvenir (`server.forward-headers-strategy: native`); Boot varsayılanında güvenilen aralık bütün özel ağlardır ve tenant `X-Forwarded-Host`'u izler, bu yüzden üretimde `internal-proxies` Caddy'ye daraltılır ve uygulama portu dışarı açılmaz. Keycloak'ın dış ve iç adresinin ayrışması S2'de doğrulanmadı (Faz 1 compose). |
 
 Bir öğrenme testi ya da Task 3 Step 4 beklenenden farklı sonuç verdiyse, ilgili ADR'nin durumunu bu kurala göre yeniden seç ve nedeni paragrafta yaz. `docs/adr/README.md` dizinindeki "Durum" hücrelerini güncelle.
 
@@ -1390,7 +1440,7 @@ Beklenen: `BUILD SUCCESS` (spike ürün reaktöründe değil); iki gitleaks komu
 
 ```bash
 git add docs/spikes/s2-identity.md docs/adr/0004-platform-veritabani.md docs/adr/0005-keycloak-organizations.md docs/adr/0006-bff-oturum-cerezi.md docs/adr/0024-onprem-linux-compose-erpctl.md docs/adr/0039-spring-session-jdbc.md docs/adr/0040-uc-kimlik-yolu.md docs/adr/README.md
-git commit -m "docs(adr): record S2 identity spike results and accept ADR-0005, 0006, 0039
+git commit -m "docs(adr): record S2 identity spike results, accept ADR-0006 and 0039, change ADR-0005
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1404,7 +1454,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] `StartupIsolationTests` yeşil: açılış, giriş, bearer çağrısı ve kapanış boyunca `TenantDataSourceStandIn.requests() == 0`.
 - [ ] `KeycloakOrganizationsLearningTests` yeşil ya da her sapma `docs/spikes/s2-identity.md`'de bulgu olarak yazılı.
 - [ ] `gitleaks git --config .gitleaks.toml --redact .` → `no leaks found`.
-- [ ] `docs/spikes/s2-identity.md` commit'li. ADR-0005, 0006, 0039 `Kabul edildi` (ya da gerekçeli `Değişti`); ADR-0040, 0004, 0024 S2 notuyla `Önerildi`; `docs/adr/README.md` ve `spikes/README.md` güncel.
+- [ ] `docs/spikes/s2-identity.md` commit'li. ADR-0006 ve 0039 `Kabul edildi`, ADR-0005 gerekçeli `Değişti` (beklenmeyen sonuçta durumlar Task 7 Step 3'teki kurala göre yeniden seçilir); ADR-0040, 0004, 0024 S2 notuyla `Önerildi`; `docs/adr/README.md` ve `spikes/README.md` güncel.
 - [ ] Spike kodu `spikes/s2-identity/` altında; silinmesi plan 0E'nin işi.
 
 ## Sonraki planlar

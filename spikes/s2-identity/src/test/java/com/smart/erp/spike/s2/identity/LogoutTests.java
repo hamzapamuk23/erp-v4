@@ -69,8 +69,9 @@ class LogoutTests {
     }
 
     /**
-     * Pinned finding: logout is per tenant session. Keycloak's SSO is over, but the application session on the other
-     * tenant lives until its own logout or timeout; back-channel logout is a Phase 3 decision.
+     * Pinned finding: logout is per tenant session. Following the logout through Keycloak ends the user's SSO session
+     * (a new login now shows the form), yet the application session on the other tenant lives on until its own logout
+     * or timeout; back-channel logout is a Phase 3 decision.
      */
     @Test
     void logoutOnOneTenantLeavesTheOtherTenantsSessionAlone() {
@@ -78,8 +79,20 @@ class LogoutTests {
         browser.login(ACME, "mm");
         browser.login(GLOBEX, "mm"); // Keycloak SSO answers without a form
 
-        assertThat(logout(browser, ACME).status()).isEqualTo(302);
+        SpikeBrowser.Page logout = logout(browser, ACME);
+        assertThat(logout.status()).isEqualTo(302);
+        SpikeBrowser.Page keycloak = browser.get(logout.location().orElseThrow(), "Accept", "text/html");
+        assertThat(keycloak.status()).isEqualTo(302);
+        assertThat(keycloak.location()).get().asString().startsWith("https://acme.erp.test/");
 
+        // The SSO session is over: a new authorization request now meets the login form instead of a formless answer.
+        SpikeBrowser.Page start =
+                browser.get("https://" + ACME + "/oauth2/authorization/keycloak", "Accept", "text/html");
+        SpikeBrowser.Page login = browser.get(start.location().orElseThrow(), "Accept", "text/html");
+        assertThat(login.status()).isEqualTo(200);
+        assertThat(login.body()).contains("id=\"kc-form-login\"");
+
+        // ... and still the other tenant's application session answers.
         assertThat(whoAmI(browser, GLOBEX).status()).isEqualTo(200);
     }
 

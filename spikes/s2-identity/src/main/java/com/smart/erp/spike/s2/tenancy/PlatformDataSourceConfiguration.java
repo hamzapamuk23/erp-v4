@@ -4,16 +4,19 @@ import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.session.jdbc.config.annotation.SpringSessionDataSource;
 
 @Configuration(proxyBeanMethods = false)
 class PlatformDataSourceConfiguration {
 
     /**
      * Not a default candidate: the tenant DataSource is the one unqualified consumers get (ADR-0015). Boot's health
-     * still checks this one, so readiness follows the platform DB.
+     * still checks this one, so readiness follows the platform DB. Spring Session finds it by its own qualifier:
+     * browser sessions live in the platform DB (doc §4.3, ADR-0039).
      */
     @Bean(defaultCandidate = false)
     @PlatformDb
+    @SpringSessionDataSource
     HikariDataSource platformDataSource(PlatformDataSourceProperties properties) {
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setPoolName("platform");

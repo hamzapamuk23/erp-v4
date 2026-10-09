@@ -1,0 +1,24 @@
+# S2 identity spike (doc §15.3). Browser sessions live in the platform DB (ADR-0039); TLS ends at the proxy (ADR-0024).
+spring:
+  application.name: erp-spike-s2
+  threads.virtual.enabled: true
+  sql.init.mode: never
+  session:
+    timeout: 30m
+    jdbc.initialize-schema: never # migrations are a separate step (doc §4.6)
+    jdbc.cleanup-cron: "-" # K12: expired-session cleanup is a db-scheduler job in Phase 1, not a framework scheduler
+server:
+  # X-Forwarded-Proto/-Host are trusted from Boot's default internal-proxies (every private range, design decision 1);
+  # production narrows them to Caddy (Phase 1/7).
+  forward-headers-strategy: native
+  servlet.session.cookie: # ADR-0006: host-only; with Secure and Path=/ a sibling subdomain cannot set it
+    name: __Host-SESSION
+    secure: true
+    http-only: true
+    same-site: lax
+    path: /
+management:
+  endpoint.health.probes.enabled: true
+  endpoint.health.group.readiness.include: readinessState,db
+  health.db.ignore-routing-data-sources: true # readiness is the platform DB; the tenant stand-in is never probed
+erp.identity.web-client-id: erp-web # issuer-uri and web-client-secret come from the environment (tests: SpikeKeycloak)

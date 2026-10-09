@@ -3,6 +3,9 @@ spring:
   application.name: erp-spike-s2
   threads.virtual.enabled: true
   sql.init.mode: never
+  security.oauth2.resourceserver.jwt:
+    issuer-uri: ${erp.identity.issuer-uri} # Boot's decoder discovers lazily (SupplierJwtDecoder)
+    audiences: erp-api # tokens issued to other clients of the realm are not API tokens
   session:
     timeout: 30m
     jdbc.initialize-schema: never # migrations are a separate step (doc §4.6)

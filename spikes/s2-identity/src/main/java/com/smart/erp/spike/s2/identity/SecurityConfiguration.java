@@ -10,9 +10,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
@@ -22,10 +24,12 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.session.DisableEncodeUrlFilter;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -41,6 +45,35 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
+    }
+
+    /**
+     * Path 2 of ADR-0040: OIDC bearer (integrations; mobile in Phase 3). Stateless: no session read or made, no CSRF. A
+     * request that carries a bearer header belongs to this chain whether the token is good or not, so a bad token is
+     * refused here and never falls through to the session cookie of the browser chain.
+     */
+    @Bean
+    @Order(1)
+    SecurityFilterChain bearerChain(HttpSecurity http, TenantDirectory tenants) throws Exception {
+        return http.securityMatcher(SecurityConfiguration::hasBearerToken)
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/**")
+                        .authenticated()
+                        .anyRequest()
+                        .denyAll())
+                .oauth2ResourceServer(resourceServer -> resourceServer.jwt(
+                        jwt -> jwt.jwtAuthenticationConverter(new TenantJwtAuthenticationConverter(tenants))))
+                .addFilterBefore(new SessionlessRequestFilter(), DisableEncodeUrlFilter.class)
+                .addFilterAfter(new BearerTenantFilter(tenants), BearerTokenAuthenticationFilter.class)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .requestCache(AbstractHttpConfigurer::disable)
+                .build();
+    }
+
+    private static boolean hasBearerToken(HttpServletRequest request) {
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        return authorization != null && authorization.regionMatches(true, 0, "Bearer ", 0, 7);
     }
 
     /** Path 1 of ADR-0040: the browser session (BFF). The tenant is the host's; login and session must agree with it. */

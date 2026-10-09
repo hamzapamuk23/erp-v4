@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
@@ -46,11 +47,19 @@ class SecurityConfiguration {
     @Bean
     @Order(2)
     SecurityFilterChain browserChain(
-            HttpSecurity http, TenantDirectory tenants, OAuth2AuthorizationRequestResolver authorizationRequests)
+            HttpSecurity http,
+            TenantDirectory tenants,
+            OAuth2AuthorizationRequestResolver authorizationRequests,
+            ClientRegistrationRepository registrations)
             throws Exception {
         RequestMatcher apiCalls = new OrRequestMatcher(
                 PathPatternRequestMatcher.withDefaults().matcher("/api/**"),
                 PathPatternRequestMatcher.withDefaults().matcher("/bootstrap"));
+        // RP-initiated logout: the ID token hint comes from the principal, the browser returns to its own host. CSRF
+        // stays at Spring Security's default (design decision 6): POST /logout needs the session's token.
+        OidcClientInitiatedLogoutSuccessHandler keycloakLogout =
+                new OidcClientInitiatedLogoutSuccessHandler(registrations);
+        keycloakLogout.setPostLogoutRedirectUri("{baseUrl}/");
         return http.addFilterBefore(new BrowserTenantFilter(tenants), CsrfFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR)
@@ -65,6 +74,7 @@ class SecurityConfiguration {
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(new TenantOidcUserService(tenants)))
                         // A redirect would restart login, Keycloak's SSO session would answer at once: a loop.
                         .failureHandler(SecurityConfiguration::loginFailed))
+                .logout(logout -> logout.logoutSuccessHandler(keycloakLogout))
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), apiCalls))
                 .build();

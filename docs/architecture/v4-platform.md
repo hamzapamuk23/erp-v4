@@ -252,9 +252,9 @@ Tenant'tan bağımsız veriler burada tutulur:
 
 | Tablo grubu | İçerik |
 |---|---|
-| `tenant` | Tenant anahtarı, adı, durumu (`PROVISIONING`, `ACTIVE`, `SUSPENDED`, `MAINTENANCE`, `ARCHIVED`), DB küme ve DB adı, saat dilimi, varsayılan dil, şema sürümü |
+| `tenant` | Tenant anahtarı, adı, durumu (`PROVISIONING`, `ACTIVE`, `SUSPENDED`, `MAINTENANCE`, `ARCHIVED`), DB küme ve DB adı, saat dilimi, varsayılan dil, şema sürümü, Keycloak bağı (`oidc_issuer`, `organization_alias`; ikisi birlikte tekil). Bağ tenant'tadır, çünkü bir tenant'ın birden çok host'u olabilir ve bearer isteğinin anlamlı bir host'u yoktur (S2, ADR-0005). |
 | `tenant_module` | Tenant'ta aktif modüller ve paketler, lisans kapsamı |
-| `tenant_domain` | Alt alan adları (`acme.erp.com`) ↔ tenant ↔ Keycloak organization |
+| `tenant_domain` | Alt alan adları (`acme.erp.com`) ↔ tenant (sadece host eşlemesi) |
 | `entitlement` / `license` | Abonelik ve lisans hakları (kullanıcı limiti, modüller, bitiş tarihi) |
 | `spring_session*` | BFF oturumları (Spring Session JDBC) |
 | `scheduled_tasks` | db-scheduler iş tablosu (her iş `tenantKey` taşır) |
@@ -564,7 +564,7 @@ Bölüm 4'teki kararların uygulamasıdır:
 | Kurumsal dizin | SaaS'ta Active Directory'si olan müşteri ADFS ya da Entra ID üzerinden OIDC/SAML ile bağlanır (organization'a bağlı IdP). Doğrudan LDAP federasyonu realm seviyesindedir; **sadece on-prem'de** (tek tenant) ya da ayrı realm istisnasında kullanılır. Bu sınır satış öncesinde müşteriye açıkça söylenir. |
 | Destek personeli | Ayrı bir **personel realm'inde** (`erp-staff`) tutulur. MFA zorunludur ve kimliğe bürünme öncesi adım-yukarı (step-up) doğrulama yapılır. Personel, müşteri realm'ine kullanıcı olarak eklenmez. |
 | On-prem | Pakette aynı realm yapısı gelir, içinde tek organization vardır. Müşterinin Active Directory'si realm seviyesinde LDAP federasyonu ile bağlanır. |
-| İstisna | Gerçek realm izolasyonu isteyen kurumsal bir SaaS müşterisi için ayrı realm açılabilir. Tenant çözümleyici `(issuer, organization) → tenant` eşlemesini kullandığı için kod değişmez. |
+| İstisna | Gerçek realm izolasyonu isteyen kurumsal bir SaaS müşterisi için ayrı realm açılabilir. Tenant çözümleyici `(issuer, organization) → tenant` eşlemesini kullandığı için çözümleyici değişmez. Bearer ve tarayıcı zincirleri ise tek issuer'a güvenir; ayrı realm için çoklu issuer'a göre yapılandırılırlar (bearer'da güvenilen issuer'lar = `tenant.oidc_issuer`, tarayıcıda tenant'ın issuer'ına göre client registration). Bu iş ilk ayrı realm müşterisiyle gelir (S2, ADR-0005). |
 | Tarayıcı | **BFF** (ADR-006). Spring Security `oauth2Login` uygulamanın içinde çalışır. Oturumlar Spring Session JDBC ile platform DB'de tutulur. Çerez `__Host-` önekli, host'a bağlı, HttpOnly, Secure ve SameSite=Lax'tır. Alt alan adları aynı "site" sayıldığı için SameSite tenant'lar arasında koruma sağlamaz; asıl koruma host'a bağlı çerez ve her istekteki host–oturum tenant kontrolüdür (§4.4). Durum değiştiren isteklerde CSRF token'ı zorunludur. Tarayıcıya access ya da refresh token verilmez. RFC 10017 (Ağustos 2026) iş uygulamaları ve kişisel veri işleyen uygulamalar için bu deseni "kesinlikle" öneriyor. |
 | Üç kimlik yolu | (1) Tarayıcı oturumu (BFF). (2) OIDC bearer: mobil uygulama ve entegrasyon API istemcileri (client credentials + sabit tenant iddiası, §4.4). (3) Cihaz kimliği: kiosk cihaz çerezi ya da uygulamanın ürettiği cihaz token'ı (§6.18). Her biri ayrı bir `SecurityFilterChain`'dir. |
 | Kullanıcı kaydı | Uygulama her tenant DB'sinde kendi `user_account` kaydını tutar: profil, dil, rol ve kapsam atamaları. Kimlik `user_account.id`'dir; Keycloak `sub` değeri değiştirilebilir bir bağlantıdır (tenant taşımada e-posta ile yeniden bağlanır, §4.7). Keycloak sadece kimlik doğrulamadan sorumludur. Davet ve organization'dan çıkarma uygulamanın yönetim ekranından Keycloak Admin API ile yapılır. |

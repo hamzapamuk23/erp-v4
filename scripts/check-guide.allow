@@ -13,6 +13,9 @@ playwright-report/
 test-results/
 reports/junit.xml
 
+# DocBuilder output of this guide; generated locally, never committed
+docs/guides/gelistirici-kilavuzu.pdf
+
 # Files created by the "kendin dene" exercises and removed afterwards
 app/src/main/java/com/smart/erp/system/GuideCheck.java
 app/src/main/java/com/smart/erp/guidecheck/GuideCheck.java

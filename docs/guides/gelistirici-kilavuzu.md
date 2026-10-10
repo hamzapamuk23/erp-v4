@@ -1,17 +1,22 @@
 # ERP v4 Geliştirici Kılavuzu
 
-Bu kılavuz, erp-v4 deposunun bugünkü halini anlatan başvuru kaynağıdır. Her faz sonunda koda göre güncellenir; geçmiş yalnızca "Faz geçmişi" bölümünde tutulur. Mimari kararların gerekçesi burada yeniden üretilmez; ilgili ADR'ye (`docs/adr/`) ya da mimari dokümanın bölümüne (`docs/architecture/v4-platform.md`, ör. §4.1) atıf yapılır. Kılavuzdaki komutlar 2026-10-06 tarihinde `feat/faz-0b-s1-tenancy` dalında (HEAD `4e1f6d6`) çalıştırılarak doğrulanmıştır; doğrulanamayanlar ayrıca işaretlenmiştir.
+Bu kılavuz, erp-v4 deposunun bugünkü halini anlatan başvuru kaynağıdır. Her faz sonunda koda göre güncellenir; geçmiş yalnızca "Faz geçmişi" bölümünde tutulur. Mimari kararların gerekçesi burada yeniden üretilmez; ilgili ADR'ye (`docs/adr/`) ya da mimari dokümanın bölümüne (`docs/architecture/v4-platform.md`, ör. §4.1) atıf yapılır. Kılavuz en son 2026-10-10 tarihinde `main` dalında (HEAD `6187a6e`) koda göre güncellenmiştir. Bu güncellemede derleme, test, sır taraması, frontend ve duman testi zincirleri, ürün uygulamasının sağlık ve bilgi uçları ile S2 spike'ına ait bütün komut ve alıştırmalar yeniden çalıştırılmıştır. Ürün koduna ve S1 spike'ına ait "kendin dene" alıştırmaları en son Faz 0A ve 0B'de çalıştırılmıştır; ilgili dosyalar o tarihten beri değişmemiştir. Doğrulanamayanlar ayrıca işaretlenmiştir.
 
-> **Kaynak önceliği:** Kod ve yapılandırma, plan dosyaları (`docs/superpowers/plans/2026-10-05-faz-0a-zemin.md`, `docs/superpowers/plans/2026-10-05-faz-0b-s1-tenancy.md`), mimari doküman, ADR'ler ve git geçmişi bu sırayla esas alınır. Kılavuz ile kod çelişirse kod doğrudur ve kılavuz düzeltilmelidir.
+> **Kaynak önceliği:** Kod ve yapılandırma, plan dosyaları (`docs/superpowers/plans/2026-10-05-faz-0a-zemin.md`, `docs/superpowers/plans/2026-10-05-faz-0b-s1-tenancy.md`, `docs/superpowers/plans/2026-10-06-faz-0c-s2-kimlik.md`), mimari doküman, ADR'ler ve git geçmişi bu sırayla esas alınır. Kılavuz ile kod çelişirse kod doğrudur ve kılavuz düzeltilmelidir.
 
 ## 1. Sisteme genel bakış ve temel felsefe
 
-Depo bugün iki parçadan oluşur:
+Depo bugün üç parçadan oluşur:
 
 - **Ürün kodu** (Faz 0A, "Zemin", yürüyen iskelet): boş bir Spring Boot uygulaması, SPA iskeleti, kalite kapıları, tek imaj, compose profilleri, duman testi ve CI tanımı. Ürün kodunda iş modülü, tenant, kimlik doğrulama ve veritabanı şeması henüz yoktur (bkz. Bölüm 10).
-- **S1 tenancy spike'ı** (Faz 0B): `spikes/s1-tenancy/` altında, varsayılan Maven reaktörünün dışında duran ve yalnızca `-Pspikes` ile derlenen atılacak bir Spring Boot uygulaması. Tenant başına veritabanı, tenant'a yönlendiren DataSource, Hibernate 7, jOOQ, Spring Modulith olay kaydı ve db-scheduler yığınını otomatik testlerle sınar. Sonuçları `docs/spikes/s1-tenancy.md`'de ve ADR'lerin "Doğrulama" bölümlerindedir; kodu Faz 0 kapanışında (plan 0E) silinir (`spikes/README.md`).
+- **S1 tenancy spike'ı** (Faz 0B): `spikes/s1-tenancy/` altında, varsayılan Maven reaktörünün dışında duran ve yalnızca `-Pspikes` ile derlenen atılacak bir Spring Boot uygulaması. Tenant başına veritabanı, tenant'a yönlendiren DataSource, Hibernate 7, jOOQ, Spring Modulith olay kaydı ve db-scheduler yığınını otomatik testlerle sınar. Sonuçları `docs/spikes/s1-tenancy.md`'de ve ADR'lerin "Doğrulama" bölümlerindedir.
+- **S2 kimlik spike'ı** (Faz 0C): `spikes/s2-identity/` altında, yine yalnızca `-Pspikes` ile derlenen atılacak bir Spring Boot uygulaması. Keycloak 26.8 Organizations ile BFF girişini, tenant'ın alt alan adından seçilmesini, oturumun `(kullanıcı, tenant)` çiftine bağlanıp Spring Session JDBC ile platform DB'sinde tutulmasını, kardeş alt alan adlarına karşı CSRF korumasını ve tenant'ı token'dan çözen bearer zincirini gerçek Keycloak ve PostgreSQL konteynerleriyle sınar. Sonuçları `docs/spikes/s2-identity.md`'dedir.
 
-44 ADR'den beşi (ADR-0003, ADR-0012, ADR-0013, ADR-0014, ADR-0015) S1 sonucuyla "Kabul edildi" durumuna geçmiştir; diğer 39'u "Önerildi" durumundadır (`docs/adr/README.md`).
+İki spike'ın kodu Faz 0 kapanışında (plan 0E) silinir (`spikes/README.md`).
+
+44 ADR'den yedisi (ADR-0003, ADR-0006, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0039) spike sonuçlarıyla "Kabul edildi", biri (ADR-0005) "Değişti" durumundadır; diğer 36'sı "Önerildi" durumundadır (`docs/adr/README.md`). Durumların anlamı aynı dosyadaki "Durum sözlüğü"nde tanımlanmıştır.
+
+Bulgu numaraları spike raporlarına aittir ve iki raporda da B1'den başlar. Kılavuzda S1 bulguları önek olmadan (B12, `docs/spikes/s1-tenancy.md`), S2 bulguları `S2` önekiyle (S2 B7, `docs/spikes/s2-identity.md`) anılır.
 
 > ⚠️ Spike kodu ürün koduna kopyalanmaz; Faz 1 ve Faz 2 kodu bulgulara göre yeniden yazılır (`spikes/README.md`). Bu kılavuzda spike'tan söz edilen her yer "bugün nasıl sınandığını" anlatır, ürünün nasıl yazılacağını değil.
 
@@ -41,7 +46,9 @@ Bugün kodda tek bir Spring Modulith uygulama modülü vardır: `com.smart.erp.s
 
 `platform/platform-test` bir Maven modülüdür ama Modulith uygulama modülü değildir: paylaşılan test altyapısıdır ve `ModularityTests` içinde `com.smart.erp.platformtest..` paketi doğrulamanın dışında tutulur.
 
-S1 spike'ı ayrı bir Spring Boot uygulamasıdır (`com.smart.erp.spike.s1.SpikeApplication`) ve dört Modulith modülü içerir: `kernel`, `tenancy`, `jobs`, `sample` (Bölüm 7.8–7.11). Bu modüller §6.1 (`kernel`), §4.3–§4.5 (`tenancy`) ve §6.12'deki (`jobs`) platform modüllerinin deneme sürümleridir; yapıları spike'ın kendi `ModularityTests` sınıfıyla doğrulanır. Ürün uygulamasının modül listesi bu fazda değişmemiştir.
+S1 spike'ı ayrı bir Spring Boot uygulamasıdır (`com.smart.erp.spike.s1.SpikeApplication`) ve dört Modulith modülü içerir: `kernel`, `tenancy`, `jobs`, `sample` (Bölüm 7.8–7.11). Bu modüller §6.1 (`kernel`), §4.3–§4.5 (`tenancy`) ve §6.12'deki (`jobs`) platform modüllerinin deneme sürümleridir.
+
+S2 spike'ı da ayrı bir uygulamadır (`com.smart.erp.spike.s2.SpikeApplication`) ve dört Modulith modülü içerir: `kernel` (S1'den kopya), `tenancy`, `identity`, `sample` (Bölüm 7.12–7.15). `identity`, §6.3.1'deki kimlik doğrulama katmanının deneme sürümüdür. Her spike'ın modül yapısı kendi `ModularityTests` sınıfıyla doğrulanır. Ürün uygulamasının modül listesi Faz 0B ve 0C'de değişmemiştir.
 
 ### 1.3 SPA'nın jar içine gömülmesi ve aynı origin
 
@@ -61,11 +68,11 @@ Sonuçları:
 - `@erp/core` içindeki `getJson` göreli yol (`/api/v1/...`) ve `credentials: 'same-origin'` kullanır.
 - Geliştirmede Vite dev sunucusu (5173) `/api` ve `/actuator` isteklerini 8080'e yönlendirerek aynı origin'i taklit eder (`web/apps/web/vite.config.ts`).
 - SPA'nın jar'a girmesi için `pnpm build`, Maven `package`'tan önce çalışmalıdır. İmajda bu sıra `app.Dockerfile`'ın `web` aşamasıyla sağlanır.
-- BFF oturum çerezi (ADR-0006) bu aynı origin düzenine dayanacaktır; oturum ve CSRF henüz yoktur.
+- BFF oturum çerezi (ADR-0006) bu aynı origin düzenine dayanır: SPA, CSRF token'ını aynı origin'deki önyükleme yanıtından okur ve kardeş alt alan adları (başka tenant'lar) bu yanıtı okuyamaz. S2 bu düzeni `/bootstrap` ile sınamıştır (Bölüm 7.15); kimlik bilgili (credentialed) CORS açılırsa koruma çöker (`docs/spikes/s2-identity.md`, "Korunacak kısıtlar"). Ürün uygulamasında oturum ve CSRF henüz yoktur.
 
 ### 1.4 Bir isteğin tarayıcıdan veritabanına yolculuğu
 
-Bugün ürün uygulamasında kimlik doğrulama ve tenant çözümleme yoktur; istekler doğrudan Spring MVC'ye ulaşır. Faz 0B bu yolu değiştirmemiştir; tenant'a bağlı veri erişimi yalnızca spike'ta vardır (Bölüm 1.5). Uygulama veritabanına yalnızca sağlık denetimi (`db` göstergesi) için bağlanır; `/api/v1/system/info` veritabanına dokunmaz.
+Bugün ürün uygulamasında kimlik doğrulama ve tenant çözümleme yoktur; istekler doğrudan Spring MVC'ye ulaşır. Faz 0B ve 0C bu yolu değiştirmemiştir; tenant'a bağlı veri erişimi (Bölüm 1.5) ile kimlik doğrulama ve tenant çözümleme (Bölüm 1.6) yalnızca spike'larda vardır. Uygulama veritabanına yalnızca sağlık denetimi (`db` göstergesi) için bağlanır; `/api/v1/system/info` veritabanına dokunmaz.
 
 ```mermaid
 sequenceDiagram
@@ -93,7 +100,7 @@ Sürüm bilgisi `spring-boot-maven-plugin`'in `build-info` hedefinin ürettiği 
 
 ### 1.5 Tenant bağlamında bir yazma işleminin yolculuğu (S1 spike'ı)
 
-Kurallar §4.4 ve §4.5'te, kararlar ADR-0003 ve ADR-0015'tedir. Spike'ta HTTP ucu yoktur; tenant'ı bugün test kodu `TenantContext.run/call` ile bağlar. Tarayıcıdan gelen istekte tenant'ı çözümleyip aynı çağrıyı yapacak katman (BFF, alt alan adı eşlemesi) S2 spike'ının (plan 0C) ve Faz 1'in konusudur.
+Kurallar §4.4 ve §4.5'te, kararlar ADR-0003 ve ADR-0015'tedir. S1 spike'ında HTTP ucu yoktur; tenant'ı test kodu `TenantContext.run/call` ile bağlar. HTTP isteğinden tenant'ı çözümleyip aynı kapsamı açan katman S2 spike'ında sınanmıştır (Bölüm 1.6). İki parçanın birleştiği uçtan uca yol (tarayıcı ya da bearer isteği → tenant DB'si) Faz 1'de kurulacaktır.
 
 ```mermaid
 sequenceDiagram
@@ -123,6 +130,49 @@ Akışın kuralları:
 - Tenant kaydı yalnızca platform DataSource'u (`@PlatformDb`) üzerinden okunur; havuz yalnızca `ACTIVE` tenant için ve ilk istekte açılır (`minimumIdle=0`).
 - Olay kaydı (`platform_events.event_publication`) iş verisiyle aynı tenant transaction'ında yazılır (ADR-0012). Olayın ardından gelen asenkron dinleyici ve iş akışı Bölüm 7.10'dadır.
 
+### 1.6 Kimlikli bir isteğin yolculuğu (S2 spike'ı)
+
+Kurallar §4.4 madde 1–2 ve §6.3.1'de, kararlar ADR-0005, ADR-0006, ADR-0039 ve ADR-0040'tadır. Spike'ta üç `SecurityFilterChain` vardır; istek, sırası en küçük olandan başlayarak eşleştiği ilk zincirde işlenir (`identity/SecurityConfiguration.java`).
+
+| Sıra | Zincir | Eşleşen istek | Ne yapar |
+|---|---|---|---|
+| 0 | `actuatorChain` | `/actuator/health/**` | Kimliksiz ve durumsuz; tenant host'u istemez. Readiness yalnızca platform DB'sine bakar |
+| 1 | `bearerChain` | `Authorization` başlığı `Bearer ` ile başlar (büyük-küçük harf duyarsız) | ADR-0040 yol 2: JWT doğrulanır, tenant `(iss, organization)`'dan çözülür; oturum ve CSRF yoktur |
+| 2 | `browserChain` | Diğer her istek | ADR-0040 yol 1: tenant host'tan çözülür; `oauth2Login`, platform DB'sinde oturum, CSRF |
+
+Bearer başlığı taşıyan istek, token geçersiz olsa bile bearer zincirinde kalır; böylece geçersiz token oturum çerezine düşmez (S2 B21). Tarayıcı girişinin akışı:
+
+```mermaid
+sequenceDiagram
+participant B as Tarayıcı
+participant F as BrowserTenantFilter
+participant S as Spring Security
+participant K as Keycloak
+participant U as TenantOidcUserService
+participant P as Platform DB
+B->>F: GET /oauth2/authorization/keycloak
+F->>P: host araması (tenant_domain, tenant)
+F->>S: TenantContext.run(acme, zincir)
+S-->>B: 302 Keycloak (organization:acme, PKCE)
+B->>K: kullanıcı adı ve şifre
+K-->>B: 302 callback (code, state)
+B->>F: GET /login/oauth2/code/keycloak
+F->>S: TenantContext.run(acme, zincir)
+S->>K: kod takası
+S->>U: loadUser(ID token)
+U-->>S: iss ve organization yalnızca acme mi?
+S->>P: oturum, yeni kimlik, principal acme:sub
+S-->>B: 302 /, Set-Cookie __Host-SESSION
+```
+
+Akışın kuralları:
+
+- Tenant her istekte host'tan çözülür: `TenantHost.normalize(request.getServerName())` ve `TenantDirectory.findByHost`. Kayıtsız host 404, `ACTIVE` olmayan tenant 503 alır; giriş başlamaz. Varsayılan tenant yoktur. Uygulama TLS'i sonlandıran proxy'nin arkasındadır ve host'u `X-Forwarded-Host`'tan öğrenir (`server.forward-headers-strategy: native`, S2 B17).
+- Organization ipucu (`organization:<alias>`) bir güvenlik sınırı değildir. Asıl kontrol callback'te, imzalı ID token üzerinde yapılır: `iss` tenant'ın issuer'ına, `organization` kümesi tam olarak tenant'ın alias'ına eşit olmalıdır. Uymayan giriş 403 `tenant_mismatch` alır ve oturum açılmaz. Bu kontrol, callback'in başka bir tenant host'unda tekrar oynatılmasına karşı tek savunmadır (S2 B2, B3).
+- Oturum Spring Session JDBC ile platform DB'sine, kendi transaction'ıyla yazılır; tenant DataSource'una hiçbir istek gitmez (S2 B7). Giriş başlangıcı, authorization isteğini saklamak için kimliği doğrulanmamış bir oturum satırı yazar (S2 B11); oturum kimliği girişte değişir. Oturumda access ve refresh token yoktur; principal (`TenantOidcUser`) yalnızca ID token'ı taşır (S2 B8).
+- Oturumlu sonraki her istekte `BrowserTenantFilter`, principal'ın tenant'ını host'un tenant'ıyla karşılaştırır; farklıysa 401 döner ve tenant bağlamı kurulmaz (S2 B14). Eşleşen istekte tenant, `TenantFilterChain.proceed` ile zincirin geri kalanı ve controller için bağlanır; controller tenant'ı `TenantContext.require()` ile okur.
+- Bearer isteğinde `SessionlessRequestFilter` oturumu istekten gizler, Boot'un JWT decoder'ı imzayı, `iss`'i ve `erp-api` audience'ını doğrular, `TenantJwtAuthenticationConverter` tenant'ı `(iss, organization)` ile çözer, `BearerTenantFilter` durumu ve host'u denetleyip tenant'ı bağlar (Bölüm 7.14).
+
 ## 2. Dizin anatomisi ve modül haritası
 
 Hedef depo yerleşimi §14'tedir. §14'teki diğer üst klasörler ilk içerikleri geldiği fazda açılır; boş klasör açılmaz (plan, "Dosya haritası").
@@ -132,7 +182,7 @@ Hedef depo yerleşimi §14'tedir. §14'teki diğer üst klasörler ilk içerikle
 | Yol | Görevi | Ürettiği | Bağlı olduğu |
 |---|---|---|---|
 | `mise.toml` | Araç zincirini sabitler: `java = "temurin-25"`, `node = "24.21.0"`, `pnpm = "12.9.1"`, `gitleaks = "8.30.1"` | `mise install` ile kurulan araçlar | mise |
-| `pom.xml` | `erp-parent`: Spring Boot 4.1.1 parent, Modulith 2.1.1 BOM, ArchUnit 1.5.1, enforcer, Error Prone 2.50.0, Spotless 3.10.3; `spikes` profili | Maven reaktörü (`platform`, `app`); `-Pspikes` ile ayrıca `spikes/s1-tenancy` | `spring-boot-starter-parent` |
+| `pom.xml` | `erp-parent`: Spring Boot 4.1.1 parent, Modulith 2.1.1 BOM, ArchUnit 1.5.1, enforcer, Error Prone 2.50.0, Spotless 3.10.3; `spikes` profili | Maven reaktörü (`platform`, `app`); `-Pspikes` ile ayrıca `spikes/s1-tenancy` ve `spikes/s2-identity` | `spring-boot-starter-parent` |
 | `mvnw`, `mvnw.cmd`, `.mvn/wrapper/maven-wrapper.properties` | Maven wrapper (Maven 3.9.16) | — | İnternet erişimi (ilk indirme) |
 | `.mvn/jvm.config` | Error Prone'un javac iç API'lerine erişmesi için `--add-exports`/`--add-opens` | — | JDK 25 |
 | `.editorconfig`, `.gitattributes` | Satır sonu LF, UTF-8; Java ve XML 4, diğerleri 2 boşluk girinti | — | Editör, git |
@@ -143,6 +193,7 @@ Hedef depo yerleşimi §14'tedir. §14'teki diğer üst klasörler ilk içerikle
 | `.gitlab-ci.yml` | CI hattı (5 aşama, 6 iş) | Test raporları, imaj, imza | GitLab, dind runner |
 | `.gitlab/merge_request_templates/Default.md` | MR şablonu ve kontrol listesi | — | GitLab |
 | `README.md`, `CONTRIBUTING.md` | Hızlı başlangıç, dal ve commit akışı | — | — |
+| `scripts/check-guide.mjs`, `scripts/check-guide.allow` | Bu kılavuzun DocBuilder biçim kurallarına ve depoya göre denetimi (Bölüm 4.2); `.allow` bilerek depoda olmayan yolların gerekçeli listesidir | Hata ve uyarı listesi, çıkış kodu | Node, git, `npx` ile `@mermaid-js/mermaid-cli@9.1.7` |
 
 ### 2.2 Backend
 
@@ -193,10 +244,13 @@ Jar içeriği doğrulanmıştır: `BOOT-INF/classes/static/index.html`, `META-IN
 | `docs/adr/` | `0000-template.md`, ADR-0001…0044, dizin `README.md` (durum sütunu) | — | — |
 | `docs/guides/` | `coding-rules.md`, `local-development.md`, `ci.md` ve bu kılavuz | — | — |
 | `docs/spikes/s1-tenancy.md` | S1 spike'ının sonuç raporu: kanıt tablosu, bulgular B1–B20, Faz 1 girdileri ve açık maddeleri, Faz 2'ye devredilenler | — | Spike testleri |
+| `docs/spikes/s2-identity.md` | S2 spike'ının sonuç raporu: kurulum, kanıt tablosu, bulgular B1–B28, Faz 1 girdileri ve 11 açık madde, Faz 2, 3 ve 7'ye devredilenler, spec'e işlenen düzeltmeler | — | Spike testleri |
+| `docs/open-questions.md` | Tasarım incelemelerinden doğan, henüz karara bağlanmamış sorular (Bölüm 10.4); karar verilen soru buradan silinir | — | — |
 | `docs/superpowers/plans/2026-10-05-faz-0a-zemin.md` | Faz 0A uygulama planı | — | — |
 | `docs/superpowers/plans/2026-10-05-faz-0b-s1-tenancy.md` | Faz 0B (S1 spike'ı) uygulama planı | — | — |
+| `docs/superpowers/plans/2026-10-06-faz-0c-s2-kimlik.md` | Faz 0C (S2 spike'ı) uygulama planı | — | — |
 
-Git'e girmeyen ama yerelde oluşan yollar: `deploy/compose/.env` (sırlar), `web/apps/web/dist` (SPA derlemesi), `app/target/` ve `spikes/s1-tenancy/target/` (Maven çıktısı), `deploy/compose/smoke-logs/` (duman testi kayıtları).
+Git'e girmeyen ama yerelde oluşan yollar: `deploy/compose/.env` (sırlar), `web/apps/web/dist` (SPA derlemesi), `app/target/`, `spikes/s1-tenancy/target/` ve `spikes/s2-identity/target/` (Maven çıktısı), `deploy/compose/smoke-logs/` (duman testi kayıtları), `docs/guides/gelistirici-kilavuzu.pdf` (bu kılavuzun DocBuilder çıktısı; `.gitignore`'da değildir ama commit'e alınmaz, plan 0C "Global Constraints").
 
 ### 2.5 Modül bağımlılıkları
 
@@ -211,9 +265,11 @@ APP -.->|test kapsamı| PT
 DIST[SPA derlemesi<br>web/apps/web/dist] -.->|process-resources| APP
 P -.->|spikes profili| SP[erp-spike-s1-tenancy<br>spikes/s1-tenancy]
 SP -.->|test kapsamı| PT
+P -.->|spikes profili| SP2[erp-spike-s2-identity<br>spikes/s2-identity]
+SP2 -.->|test kapsamı| PT
 ```
 
-Kesikli `spikes profili` oku, modülün yalnızca `-Pspikes` verildiğinde reaktöre girdiğini gösterir. Spike, `erp-parent`'ı `relativePath` ile, `erp-platform-test`'i ise yerel Maven deposundan çözer; bu yüzden önce `./mvnw -q install -DskipTests` çalıştırılmalıdır (Bölüm 3.10).
+Kesikli `spikes profili` oku, modülün yalnızca `-Pspikes` verildiğinde reaktöre girdiğini gösterir. Spike'lar birbirine bağlı değildir. Her spike, `erp-parent`'ı `relativePath` ile, `erp-platform-test`'i ise yerel Maven deposundan çözer; bu yüzden önce `./mvnw -q install -DskipTests` çalıştırılmalıdır (Bölüm 3.10).
 
 pnpm workspace (oklar `package.json` bağımlılığını gösterir):
 
@@ -242,8 +298,16 @@ Spike'lar §15.3'teki riskli kararları gerçek kodla sınayan atılacak projele
 | `spikes/s1-tenancy/src/main/resources/db/platform` | Platform DB migration'ları: `tenant`, `scheduled_tasks` | — | Flyway (yalnızca test fixture'ı) |
 | `spikes/s1-tenancy/src/main/resources/db/tenant` | Tenant DB migration'ları: `platform_events.event_publication`, `sample.sample_record` | — | Flyway (yalnızca test fixture'ı) |
 | `spikes/s1-tenancy/src/test/java/com/smart/erp/spike/s1/support` | Çok veritabanlı fixture (`SpikeDatabases`), test ayarları, `@SpikeTest`, bağlamı önbellek dışında açan `SpikeContexts`, `SpikeAssertions` | — | Testcontainers, Flyway |
+| `spikes/s2-identity/pom.xml` | `erp-spike-s2-identity`: Web MVC, JDBC, Actuator, `spring-boot-starter-security-oauth2-client`, `spring-boot-starter-security-oauth2-resource-server`, `spring-boot-starter-session-jdbc`; test kapsamında Flyway, Modulith test ve `erp-platform-test`; Surefire `argLine` `-Djdk.httpclient.allowRestrictedHeaders=host` | `spikes/s2-identity/target/` | `erp-parent`, yerel depodaki `erp-platform-test` |
+| `spikes/s2-identity/src/main/java/com/smart/erp/spike/s2` | `SpikeApplication` ve `kernel`, `tenancy`, `identity`, `sample` modülleri (Bölüm 7.12–7.15) | — | — |
+| `spikes/s2-identity/src/main/resources/application.yaml` | Bearer decoder'ın issuer ve audience'ı, oturum (`timeout`, `initialize-schema: never`, `cleanup-cron: "-"`), `__Host-SESSION` çerezi, `forward-headers-strategy: native`, readiness | — | — |
+| `spikes/s2-identity/src/main/resources/db/platform` | Platform DB migration'ları: `tenant`, `tenant_domain`, Spring Session tabloları | — | Flyway (yalnızca test fixture'ı) |
+| `spikes/s2-identity/src/test/java/com/smart/erp/spike/s2/support` | PostgreSQL fixture'ı (`SpikeDatabases`), Keycloak fixture'ı (`SpikeKeycloak`), test tarayıcısı (`SpikeBrowser`), ortam (`SpikeEnvironment`), `@SpikeTest`, `SpikeContexts` | — | Testcontainers, Flyway, Keycloak Admin API |
+| `spikes/s2-identity/src/test/resources/keycloak/erp-realm.json` | Test realm'i `erp`: Organizations açık, `erp-web` ve altı entegrasyon istemcisi; kullanıcı, organization ve sır içermez | — | Keycloak `--import-realm` |
 
-Spike uygulamasının `application.yaml` dosyasında bağlantı ayarı yoktur. Altı bağlantı özelliği (`erp.platform.datasource.*` ve `erp.tenancy.datasource.*`) testlerde `SpikeDatabases.applicationProperties()` tarafından üretilir; spike'ı testler dışında çalıştırmanın tanımlı bir yolu yoktur.
+S1 spike'ının `application.yaml` dosyasında bağlantı ayarı yoktur. Altı bağlantı özelliği (`erp.platform.datasource.*` ve `erp.tenancy.datasource.*`) testlerde `SpikeDatabases.applicationProperties()` tarafından üretilir.
+
+S2 spike'ının `application.yaml` dosyasında da bağlantı adresi ve sır yoktur. `erp.platform.datasource.*` değerlerini `SpikeDatabases.applicationProperties()`, `erp.identity.issuer-uri` ve `erp.identity.web-client-secret` değerlerini `SpikeKeycloak.applicationProperties()` üretir; `SpikeEnvironment` bunları bağlama ekler ve üç test tenant'ını platform DB'sine kaydeder. Spike'ları testler dışında çalıştırmanın tanımlı bir yolu yoktur.
 
 ## 3. Günlük çalışma döngüsü
 
@@ -310,7 +374,7 @@ Beklenen durum: `postgres` (`erp-postgres:local`) `healthy`, `keycloak` (`quay.i
 | Servis | Adres | Not |
 |---|---|---|
 | PostgreSQL | `127.0.0.1:5432` | Veritabanları `erp_platform`, `keycloak` |
-| Keycloak | `http://localhost:8180` | Yönetici `admin`, şifre `.env` içindeki `KEYCLOAK_ADMIN_PASSWORD`; uygulama henüz kullanmıyor |
+| Keycloak | `http://localhost:8180` | Yönetici `admin`, şifre `.env` içindeki `KEYCLOAK_ADMIN_PASSWORD`; ürün uygulaması henüz kullanmıyor, S2 spike'ı kendi Keycloak konteynerini açar (Bölüm 3.10) |
 | Mailpit | `http://localhost:8025` (SMTP 1025) | Uygulama henüz kullanmıyor |
 | Uygulama | `http://localhost:8080` | Bölüm 3.4 |
 | SPA dev sunucusu | `http://localhost:5173` | Bölüm 3.5 |
@@ -342,7 +406,7 @@ Tam doğrulama (derleme, Error Prone, testler, Modulith, ArchUnit, Spotless, lis
 ./mvnw clean verify
 ```
 
-Beklenen: `Tests run: 11` (`erp-platform-test`), `Tests run: 20` (`erp-app`), `BUILD SUCCESS`. Doğrulama makinesinde süre 1 dakika 17 saniye ölçülmüştür (Docker imajları önbellekteyken; sürenin çoğu Testcontainers ile açılan veritabanlarıdır). Bu komut spike'ı derlemez; spike için Bölüm 3.10'a bakılır.
+Beklenen: `Tests run: 11` (`erp-platform-test`), `Tests run: 20` (`erp-app`), `BUILD SUCCESS`. Doğrulama makinesinde süre Faz 0A'da 1 dakika 17 saniye, Faz 0C'de 19 saniye ölçülmüştür (ikisinde de Docker imajları önbellekteyken; sürenin çoğu Testcontainers ile açılan veritabanlarıdır). Bu komut spike'ları derlemez; spike'lar için Bölüm 3.10'a bakılır.
 
 > `clean` her zaman eklenmelidir. VS Code ve Antigravity'nin Java dil sunucuları `target/` altına bozuk sınıf dosyaları yazabilir; Faz 0A'da bu yaşanmıştır (Bölüm 9).
 
@@ -360,7 +424,7 @@ java -jar app/target/erp-app.jar --spring.profiles.active=dev
 
 3. IDE'de `ErpApplication` sınıfı, aktif profil `dev` olarak çalıştırılır (doğrulanmadı).
 
-> Faz 0B doğrulamasında 8080 portu çalışan bir compose `app` servisi (`ci` profili) tarafından kullanılıyordu. Jar yolu bu yüzden `--server.port=18081` eklenerek denenmiş, aşağıdaki iki yanıt aynen alınmıştır; 8080 doluysa aynı yöntem kullanılır.
+> Faz 0B ve 0C doğrulamalarında 8080 portu çalışan bir compose `app` servisi (`ci` profili) tarafından kullanılıyordu. Jar yolu bu yüzden `--server.port=18081` eklenerek denenmiş, aşağıdaki iki yanıt aynen alınmıştır; 8080 doluysa aynı yöntem kullanılır.
 
 `dev` profili `application-dev.yaml` üzerinden `deploy/compose/.env` dosyasını hem depo kökünden hem `app/` klasöründen arar ve `spring.datasource.password` değerini `ERP_PLATFORM_DB_PASSWORD`'den alır. Profil verilmezse şifre boştur; uygulama yine açılır ama `readiness` `DOWN` olur (Bölüm 6.2).
 
@@ -425,6 +489,24 @@ JDWP satırı doğrulanmıştır (`Listening for transport dt_socket at address:
 
 Platform DB'si `erp_platform`'dur. Platform rolü `erp_platform`, tenant rolü `erp_tenant`'tır; şifreler her çalıştırmada `UUID.randomUUID()` ile üretilir, depoda şifre yoktur (K9). Her veritabanının `CONNECT` yetkisi `PUBLIC`'ten alınmıştır; tenant rolü platform DB'sine bağlanamaz (`SpikeDatabasesTests`). Migration'ları uygulama değil fixture çalıştırır (`erpctl migrate` rolü, §4.6). Testler, uygulamanın yönlendirmesini atlayan süper kullanıcı sorgularıyla (`SpikeDatabases.tenantDatabase(...)`) satırın hangi veritabanına yazıldığını bağımsız olarak doğrular.
 
+S2 spike'ının fixture'ı iki konteyner açar. `SpikeDatabases` (`spikes/s2-identity/src/test/java/com/smart/erp/spike/s2/support/SpikeDatabases.java`) PostgreSQL 18.6'da yalnızca `erp_platform`'u kurar; tenant DB'si yoktur. `SpikeKeycloak` aynı dizinde Keycloak 26.8.0'ı `start-dev --import-realm` ile açar, kullanıcıları, organization'ları ve üyelikleri Admin API ile kurar. Kullanıcı şifreleri, yönetici şifresi ve DB rol şifresi her çalıştırmada üretilir; client secret'lar Keycloak'tan okunur (K9). Tenant'lar `SpikeEnvironment` tarafından fixture'ın issuer'ıyla kaydedilir:
+
+| Tenant | Host | Organization alias | Durum |
+|---|---|---|---|
+| `acme` | `acme.erp.test` | `acme` | `ACTIVE` |
+| `globex` | `globex.erp.test` | `globex` | `ACTIVE` |
+| `initech` | `initech.erp.test` | `initech` | `ACTIVE` (askıya alma testi geçici olarak `SUSPENDED` yapar) |
+| — | `api.erp.test`, `unknown.erp.test` | — | Kayıtsız: nötr API host'u ve bilinmeyen host |
+
+| Kullanıcı | Organization üyeliği | Kullanım |
+|---|---|---|
+| `ayse` | acme | Tek tenant'lı kullanıcı |
+| `zeynep` | globex | acme'de "üye değil" senaryosu |
+| `mm` | acme, globex | Mali müşavir: iki tenant, iki bağımsız oturum |
+| `ipek` | initech | Askıya alma senaryosu |
+
+Entegrasyon istemcileri realm dosyasındadır: `acme-integration`, `initech-integration`, `multi-integration` (iki organization), `unknown-integration` (kayıtsız organization), `noorg-integration` (tenant eşleyicisi yok), `noaud-integration` (`erp-api` audience'ı yok). Test realm'ine özgü iki ayar üretime taşınmaz: `sslRequired: none` ve kullanıcı adı alt sınırının 2'ye indirilmesi (S2 B26).
+
 ### 3.9 Yığını durdurma ve sıfırlama
 
 ```bash
@@ -439,9 +521,11 @@ docker compose -f deploy/compose/compose.yaml --profile dev down --volumes
 
 Durdurma ve sıfırlama komutları commit `86779d0`'dan beri `--profile dev` ile yazılır; böylece `dev` profilindeki `keycloak` ve `mailpit` de komutun kapsamına girer. Profil verilmeden çalıştırıldığında dev servislerinin ne olacağı doğrulanmamıştır.
 
-### 3.10 S1 spike'ını çalıştırma
+### 3.10 Spike'ları çalıştırma
 
-Spike compose yığınına ihtiyaç duymaz; veritabanlarını Testcontainers ile kendisi açar. Docker Desktop çalışıyor olmalıdır.
+Spike'lar compose yığınına ihtiyaç duymaz; veritabanlarını ve S2'nin Keycloak'ını Testcontainers ile kendileri açar. Docker Desktop çalışıyor olmalıdır.
+
+#### S1 tenancy spike'ı
 
 ```bash
 # Bir kez ve platform/ ya da kök pom.xml her değiştiğinde
@@ -451,7 +535,7 @@ Spike compose yığınına ihtiyaç duymaz; veritabanlarını Testcontainers ile
 ./mvnw -Pspikes -pl spikes/s1-tenancy verify
 ```
 
-Beklenen: `Tests run: 90, Failures: 0, Errors: 0, Skipped: 0` ve `BUILD SUCCESS`. Doğrulama makinesinde süre 45 saniyedir; bunun yaklaşık 32 saniyesi fixture'ın konteyneri açıp veritabanlarını kurmasıdır. Bu maliyeti fixture'ı ilk kullanan test sınıfı taşır (doğrulama çalışmasında `SpikeDatabasesTests`).
+Beklenen: `Tests run: 90, Failures: 0, Errors: 0, Skipped: 0` ve `BUILD SUCCESS`. Süre Faz 0B'de 45 saniye (yaklaşık 32 saniyesi fixture'ın konteyneri açıp veritabanlarını kurması), Faz 0C doğrulamasında 14 saniye ölçülmüştür. Fixture maliyetini onu ilk kullanan test sınıfı taşır.
 
 Tek bir test sınıfı ve biçimlendirme:
 
@@ -470,6 +554,27 @@ spikes/s1-tenancy -> [Help 1]
 
 Hata ayıklama için test raporları `spikes/s1-tenancy/target/surefire-reports/` altındadır. Testler bağlam önbelleğini paylaşır (`@SpikeTest` tek bir bağlam açar); açılış ve kapanışı gözlemleyen testler (`StartupIsolationTests`) bağlamı önbellek dışında `SpikeContexts.start(...)` ile açar ve ayarları komut satırı argümanı olarak verir, çünkü `SpringApplicationBuilder.properties()` ile verilen değerleri `application.yaml` ezer (Bölüm 9).
 
+#### S2 kimlik spike'ı
+
+İlk çalıştırma `quay.io/keycloak/keycloak:26.8.0` imajını çeker. Keycloak ve PostgreSQL konteynerleri test çalışması başına bir kez açılır.
+
+```bash
+./mvnw -q install -DskipTests
+./mvnw -Pspikes -pl spikes/s2-identity verify
+```
+
+Beklenen: `Tests run: 127, Failures: 0, Errors: 0, Skipped: 0` ve `BUILD SUCCESS`. Faz 0C doğrulamasında süre 24 saniyedir (imajlar önbellekteyken). Fixture'ları ilk kullanan test sınıfı konteynerlerin açılışını ve Keycloak kurulumunu taşır; doğrulama çalışmasında bu `SessionWiringTests` olmuş ve 15,6 saniye sürmüştür.
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity test -Dtest=CsrfTests
+# Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+./mvnw -Pspikes -pl spikes/s2-identity spotless:apply
+```
+
+`-Pspikes` unutulursa hata S1'deki gibidir (`Could not find the selected project in the reactor: spikes/s2-identity`).
+
+Testler uygulamaya gerçek HTTP ile gider. Test tarayıcısı `SpikeBrowser`, uygulamaya Caddy'nin yaptığı gibi `http://127.0.0.1:<port>` adresine `Host: <tenant>.erp.test` ve `X-Forwarded-Proto: https` başlıklarıyla, Keycloak'a ise doğrudan bağlanır; Keycloak'ın giriş formunu doldurur ve host başına çerez kavanozu tutar. JDK HTTP istemcisi `Host` başlığını varsayılan olarak yasakladığından Surefire'a `-Djdk.httpclient.allowRestrictedHeaders=host` verilir (`spikes/s2-identity/pom.xml`). Açılış ve kapanışı gözlemleyen testler (`StartupIsolationTests`, `KeycloakUnavailableTests`) S1'deki gibi `SpikeContexts.start(...)` kullanır. Test raporları `spikes/s2-identity/target/surefire-reports/` altındadır.
+
 ## 4. Kalite kapıları: build'i ne kırar
 
 Kırmızı çizgilerin (K1–K15) tanımı §3.2'dedir; denetim durumunun depo içi özeti `docs/guides/coding-rules.md`'dedir. Bu bölüm her kuralın kodda nerede zorunlu kılındığını ve ihlalde hangi hatanın görüldüğünü gösterir.
@@ -478,7 +583,7 @@ Kırmızı çizgilerin (K1–K15) tanımı §3.2'dedir; denetim durumunun depo i
 
 ### 4.1 Zorunlu kırmızı çizgiler ve kurallar
 
-Faz 0A deponun ilk fazı olduğu için aşağıdaki kuralların hepsi o fazda zorunlu hale gelmiştir (✅). Faz 0B ürün build'ine yeni bir kural eklememiştir; bu fazda zorunlu hale gelenler yalnızca `-Pspikes` ile çalışan spike kapılarıdır (Bölüm 4.7).
+Faz 0A deponun ilk fazı olduğu için aşağıdaki kuralların hepsi o fazda zorunlu hale gelmiştir (✅). Faz 0B ve Faz 0C ürün build'ine yeni bir kural eklememiştir; bu fazlarda zorunlu hale gelenler yalnızca `-Pspikes` ile çalışan spike kapılarıdır (Bölüm 4.7 ve 4.8). Faz 0C ile birlikte ayrıca kılavuz denetimi betiği eklenmiştir (Bölüm 4.2).
 
 | Kural | Neden | Nerede zorunlu | İhlalde görülen hata | Faz 0A |
 |---|---|---|---|---|
@@ -519,8 +624,9 @@ Ayrıntılar:
 | pnpm `allowBuilds` | Derleme betiği olan bağımlılık için açık karar | `web/pnpm-workspace.yaml` | `pnpm install` | `ERR_PNPM_IGNORED_BUILDS` |
 | Compose zorunlu değişkenleri | `.env` olmadan yığın başlamaz | `deploy/compose/compose.yaml` (`${VAR:?...}`) | `docker compose ... up` | `required variable POSTGRES_PASSWORD is missing a value` |
 | Duman testi | Tek imaj + compose + tarayıcı | `deploy/compose/smoke.sh` | `deploy/compose/smoke.sh` | `Smoke test FAILED (exit N). Logs: ...` |
+| Kılavuz denetimi | Bu kılavuzda DocBuilder kuralları (80 karakter, dil etiketi, H5, kod dışı HTML, emoji, tablo sütunu, Mermaid 9.1.7 ile çizim, ASCII sınıf ve ER adları) ve satır içi koddaki yolların depoda bulunması | `scripts/check-guide.mjs`, `scripts/check-guide.allow` | `mise x -- node scripts/check-guide.mjs` | `HATA  docs/guides/gelistirici-kilavuzu.md:<satır> [missing-path] Depoda yok: ...`, çıkış kodu 1 |
 
-Bu tablodaki kapıların tamamı Faz 0A'da eklenmiştir. Testcontainers testleri çalışan bir Docker gerektirir.
+Kılavuz denetimi dışındaki kapıların tamamı Faz 0A'da eklenmiştir. Kılavuz denetimi Faz 0B ile 0C arasında `main`'e eklenmiştir (commit `e8d84c8`); yalnızca bu kılavuz değiştiğinde elle çalıştırılır, CI'da yoktur. Kodda bulunamayan CamelCase adları hata değil uyarı olarak listeler; bilerek depoda olmayan bir yol (ör. "kendin dene" dosyası) gerekçesiyle `scripts/check-guide.allow`'a eklenir. Testcontainers testleri çalışan bir Docker gerektirir.
 
 ### 4.3 Henüz zorunlu olmayan K kuralları
 
@@ -541,6 +647,8 @@ Bu tablodaki kapıların tamamı Faz 0A'da eklenmiştir. Testcontainers testleri
 Faz sütunu `docs/guides/coding-rules.md`'den alınmıştır. K9'un "entegrasyon kimlik bilgileri şifreli saklanır" kısmının uygulanacağı bir entegrasyon henüz yoktur.
 
 S1 spike'ı K3 ve K7'nin kalıbını örnek kodla göstermiştir (`SampleService.record`: tek komut, tek transaction; `SampleRecord`: `@Version Long`), ancak bunları denetleyen bir kural yazmamıştır. Bulgu raporu Faz 1 için ayrıca şu kapıları önerir (`docs/spikes/s1-tenancy.md`, "Faz 1 için girdiler"): açılış ve kapanış izolasyon testinin kalıcı kalite kapısı olması (B9, web katmanı dahil) ve `@GeneratedValue`/`@SequenceGenerator` kullanımını yasaklayan bir ArchUnit kuralı (§4.5'teki havuzlu sequence optimizer tuzağı, ADR-0015).
+
+S2 bulgu raporu Faz 1 için şu kapıları ekler (`docs/spikes/s2-identity.md`, "Faz 1 için girdiler"): uygulamanın `TransactionTemplate`'inin varsayılan DataSource'ta kaldığını doğrulayan `SessionWiringTests` (S2 B7); giriş iddia kontrolü ve callback tekrar oynatma regresyon testi (S2 B3); tam giriş ve bearer çağrısını içeren, JPA, jOOQ ve Modulith'le birlikte servlet açılış izolasyon testi (S2 B25, S1 açık madde 1); host ile oturum kontrolünün testi (S2 B14); bearer zincirinin oturuma dokunmadığını `last_access_time` ve `Set-Cookie` üzerinden doğrulayan test (S2 B22). Rapora göre bu kapılar statü kodunun yanında ayırt edici bir sinyal de doğrulamalıdır: başka tenant'ın oturumuyla gelen isteğin 401'i oturumsuz isteğin 401'iyle aynı yanıttır.
 
 ### 4.4 Kendin dene: backend
 
@@ -945,6 +1053,122 @@ TenantContextTests.switchingTenantInsideASynchronizationOnlyScope
 
 Bu, son incelemede bulunan hatanın kendisidir: `PROPAGATION_SUPPORTS` ve `NOT_SUPPORTED` kapsamlarında gerçek transaction olmadığı halde ilk bağlantı kapsama bağlanır ve korumasız sürümde ikinci tenant'ın yazması sessizce ilk tenant'a gider (B12, commit `117f78c`). Geri alma: `git checkout -- spikes/s1-tenancy/src/main/java/com/smart/erp/spike/s1/kernel/TenantContext.java`
 
+### 4.8 S2 spike'ının kapıları
+
+S2 modülü de `erp-parent`'tan Error Prone (K10, K11), Spotless ve enforcer'ı miras alır. Aşağıdaki kapılar Faz 0C'de eklenmiştir ve yalnızca `./mvnw -Pspikes -pl spikes/s2-identity verify` ile çalışır; ürün build'i ve CI bunları çalıştırmaz. Test sınıfları `spikes/s2-identity/src/test/java/com/smart/erp/spike/s2/` altındadır.
+
+| Kapı | Neden | Nerede | İhlalde görülen hata | Faz 0C |
+|---|---|---|---|---|
+| Açılış, giriş, oturumlu ve bearer çağrısı, kapanış boyunca tenant DataSource'una istek yok | §4.3, ADR-0039; S2 B7, B25 | `StartupIsolationTests` (`TenantDataSourceStandIn.requests()` sıfır) | Giriş 500 ya da sayaç sıfır değil | ✅ |
+| Spring Session'ın transaction kancası uygulamanınkini bastırmaz | S2 B7 | `SessionWiringTests` | `No bean named 'transactionTemplate' available` | ✅ |
+| Girişte ID token'ın `iss`'i ve tam organization kümesi denetlenir | ADR-0005; S2 B2, B3 | `OrganizationClaimCheckTests`, `SessionTenantBindingTests` | `expected: 403 but was: 200` (ya da `302`) | ✅ |
+| Başka tenant'ın oturumu bu host'ta geçmez | ADR-0006; S2 B14 | `SessionTenantBindingTests` | `expected: 401 but was: 200` | ✅ |
+| Bearer isteği oturumu okumaz, yaratmaz, kimliğini döndürmez | ADR-0040; S2 B21–B23 | `BearerChainTests` | `Expecting empty but was: ["__Host-SESSION=...` | ✅ |
+| CSRF oturuma bağlıdır; double-submit çerezi işe yaramaz | ADR-0006; S2 B15 | `CsrfTests`, `LogoutTests` | Beklenen 403 yerine 200 | ✅ |
+| Keycloak yokken uygulama açılır ve hazırdır | S2 B6 | `KeycloakUnavailableTests`, `LazyClientRegistrationRepositoryTests` | Açılış hatası ya da readiness 503 | ✅ |
+| K1, K10, K12 | §3.2 | Spike `ModularityTests`, `ArchitectureRulesTests` | `org.springframework.modulith.core.Violations`, `Architecture Violation ...` | ✅ |
+
+Aşağıdaki alıştırmalar kılavuz hazırlanırken çalıştırılmış ve her biri `git checkout` ile geri alınmıştır. Komutların her biri Keycloak ve PostgreSQL konteynerlerini açtığı için doğrulama makinesinde 18–20 saniye sürmüştür. Dosya yolları `spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/identity/` altındadır.
+
+#### Kendin dene: Spring Session'ın transaction kancasını kaldırmak
+
+`SessionConfiguration.java` içindeki `@Bean(name = "springSessionTransactionOperations", defaultCandidate = false)` satırı silinir.
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity test \
+  -Dtest='StartupIsolationTests,SessionWiringTests'
+```
+
+```text
+Caused by: com.smart.erp.spike.s2.kernel.MissingTenantContextException:
+No tenant is bound to this thread; ...
+StartupIsolationTests.sessionsSecurityAndActuatorNeverAskForThe
+  TenantDataSource:31
+expected: "ok"
+ but was: "<html><body><h1>Whitelabel Error Page</h1>... status=500 ...
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0
+```
+
+Kanca yokken Spring Session bağlamdaki tek `PlatformTransactionManager`'ı, yani Boot'un varsayılan (tenant) DataSource üzerindeki yöneticisini alır ve ilk oturum kaydı tenant DataSource'una gider. Yer tutucu bağlantıyı reddettiği için hata burada görünür; Faz 1'in gerçek routing DataSource'unda aynı hata sessiz kalır (S2 B7). `SessionWiringTests` bu durumda geçer: Boot'un `transactionTemplate`'i yerindedir. Geri alma: `git checkout -- spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/identity/SessionConfiguration.java`
+
+#### Kendin dene: kancayı varsayılan aday yapmak
+
+Aynı satırdaki `, defaultCandidate = false` kısmı silinir.
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity test -Dtest=SessionWiringTests
+```
+
+```text
+[ERROR]   SessionWiringTests.applicationTransactionsStayOnTheDefault
+  DataSource:31 » NoSuchBeanDefinition No bean named
+  'transactionTemplate' available
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+```
+
+Boot `transactionTemplate`'i `@ConditionalOnMissingBean(TransactionOperations.class)` ile kurar; varsayılan aday bir `TransactionOperations` onu bastırır ve uygulama kodu platform DB'sinin şablonunu alır. Geri alma: `git checkout -- spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/identity/SessionConfiguration.java`
+
+#### Kendin dene: girişte yalnızca issuer'ı denetlemek
+
+`TenantOidcUserService.java` içindeki koşul `if (!sameIssuer)` haline getirilir (organization kümesi karşılaştırması silinir).
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity test \
+  -Dtest='OrganizationClaimCheckTests,SessionTenantBindingTests'
+```
+
+```text
+SessionTenantBindingTests.callbackReplayedOnAnotherHostDoesNotLogIn
+expected: 403
+ but was: 302
+OrganizationClaimCheckTests.memberOfAnotherOrganizationCannotLogInHere
+expected: 403
+ but was: 200
+[ERROR] Tests run: 8, Failures: 5, Errors: 0, Skipped: 0
+```
+
+Dört `OrganizationClaimCheckTests` testinin hepsi (kurcalanmış, joker ve silinmiş ipucu, üye olmayan kullanıcı) ile callback tekrar oynatma testi kırılır: kontrol yokken Keycloak bu girişleri reddetmez, globex üyesi acme'de oturum açar (S2 B1–B3). Geri alma: `git checkout -- spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/identity/TenantOidcUserService.java`
+
+#### Kendin dene: bearer zincirinden `SessionlessRequestFilter`'ı çıkarmak
+
+`SecurityConfiguration.java` içindeki `.addFilterBefore(new SessionlessRequestFilter(), DisableEncodeUrlFilter.class)` satırı silinir.
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity test -Dtest=BearerChainTests
+```
+
+```text
+BearerChainTests.bearerRequestIgnoresAnySessionCookie:186 [Set-Cookie]
+Expecting empty but was: ["__Host-SESSION=...; Path=/; Secure;
+HttpOnly; SameSite=Lax"]
+BearerChainTests.invalidBearerTokenDoesNotFallBackToTheSession:142
+[the session was not read]
+[ERROR] Tests run: 13, Failures: 3, Errors: 0, Skipped: 0
+```
+
+Üçüncü hata `errorDispatchIsServedWithoutTheSession` testidir. `SessionCreationPolicy.STATELESS` Spring Session arkasında durumsuzluk vermez: çerezdeki oturum yüklenir, boşta kalma süresi uzar ve geçerli token'da oturum kimliği döndürülür (S2 B22). Geri alma: `git checkout -- spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/identity/SecurityConfiguration.java`
+
+#### Kendin dene: host ile oturum kontrolünü kaldırmak
+
+`BrowserTenantFilter.java` içindeki `sessionBelongsTo` metodundan `&& user.tenant().equals(hostTenant)` kısmı silinir.
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity test \
+  -Dtest=SessionTenantBindingTests
+```
+
+```text
+SessionTenantBindingTests.oneUserGetsOneIndependentSessionPerTenant:67
+expected: 401
+ but was: 200
+SessionTenantBindingTests.sessionCookieReplayedOnAnotherTenantsHostIs401
+expected: 401
+ but was: 200
+[ERROR] Tests run: 4, Failures: 2, Errors: 0, Skipped: 0
+```
+
+Gerçek tarayıcı `__Host-` çerezini başka host'a göndermez; bu kontrol derinlemesine savunmadır ve test ancak çerez kavanozu taşınarak kurulabilir (S2 B14). Geri alma: `git checkout -- spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/identity/BrowserTenantFilter.java`
+
 ## 5. Paketleme, CI, dağıtım ve duman testi
 
 Paketleme ilkeleri §11.1, yürüyen iskelet yaklaşımı §11 girişindedir: Faz 0'dan itibaren her commit on-prem ile aynı compose paketiyle ayağa kaldırılır.
@@ -965,7 +1189,7 @@ docker build -f deploy/docker/app.Dockerfile -t erp-app:local .
 
 Giriş komutu `java -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError org.springframework.boot.loader.launch.JarLauncher`'dır. `ARG VERSION` (varsayılan `dev`) yalnızca `org.opencontainers.image.version` etiketine yazılır; uygulamanın bildirdiği sürüm Maven `build-info`'dan gelir (`0.1.0-SNAPSHOT`).
 
-> ⚠️ İmaj derlemesinde testler atlanır (`-DskipTests`); testler CI'da `backend:verify` işinde çalışır. Yeni bir üst düzey Maven klasörü açıldığında (§14'teki modül, paket ve müşteri klasörleri) `backend` aşamasındaki `COPY` satırlarına eklenmelidir; Dockerfile'daki yorum bunu hatırlatır. `spikes/` klasörü bilerek kopyalanmaz: kök `pom.xml` ona yalnızca `spikes` profilinde atıf yapar ve imaj bu profil olmadan derlenir (Faz 0B doğrulamasında `smoke.sh` imajı yeniden derleyerek geçmiştir).
+> ⚠️ İmaj derlemesinde testler atlanır (`-DskipTests`); testler CI'da `backend:verify` işinde çalışır. Yeni bir üst düzey Maven klasörü açıldığında (§14'teki modül, paket ve müşteri klasörleri) `backend` aşamasındaki `COPY` satırlarına eklenmelidir; Dockerfile'daki yorum bunu hatırlatır. `spikes/` klasörü bilerek kopyalanmaz: kök `pom.xml` ona yalnızca `spikes` profilinde atıf yapar ve imaj bu profil olmadan derlenir (Faz 0B ve 0C doğrulamalarında `smoke.sh` imajı yeniden derleyerek geçmiştir).
 
 Doğrulama:
 
@@ -1011,7 +1235,7 @@ E --> F[sign<br>image:sign]
 
 | Aşama | İş | Ne doğrular | Yerel karşılığı | Yerelde |
 |---|---|---|---|---|
-| check | `secrets:gitleaks` | Tüm git geçmişinde sır (`GIT_DEPTH: "0"`) | `gitleaks git --config .gitleaks.toml --redact .` | ✅ `no leaks found` (42 commit) |
+| check | `secrets:gitleaks` | Tüm git geçmişinde sır (`GIT_DEPTH: "0"`) | `gitleaks git --config .gitleaks.toml --redact .` | ✅ `no leaks found` (58 commit) |
 | verify | `backend:verify` | Derleme, Error Prone, testler (Testcontainers, dind), Modulith, ArchUnit, Spotless, lisans; SBOM ve `THIRD-PARTY.txt` artifact | `./mvnw verify` | ✅ `BUILD SUCCESS` |
 | verify | `frontend:verify` | Biçim, lint, tip, test, build, lisans | Bölüm 8.5'teki frontend zinciri | ✅ |
 | package | `image:build` | Tek imaj; buildx ile SBOM ve provenance attestation'ı; digest `APP_IMAGE_DIGEST` olarak dotenv artifact'ına | `docker build -f deploy/docker/app.Dockerfile -t erp-app:local .` | ✅ (buildx, attestation ve push doğrulanmadı) |
@@ -1022,7 +1246,7 @@ Hat kuralları: merge request pipeline'ları çalışır; açık MR'ı olan dal 
 
 Digest'in sınanması kararı commit `f1ba3c3` ile gelmiştir: imzalanan bayt dizisi ile duman testinden geçen bayt dizisinin aynı olması için `smoke:compose` değişebilir etiketi değil `image:build`'in ürettiği digest'i çalıştırır.
 
-`.gitlab-ci.yml` spike'ı çalıştırmaz: `backend:verify` işi `-Pspikes` vermez. Spike testleri yalnızca yerelde, Bölüm 3.10'daki komutla çalışır; bu, plan 0B'nin "CI onu derlemez" kısıtıdır.
+`.gitlab-ci.yml` spike'ları çalıştırmaz: `backend:verify` işi `-Pspikes` vermez. Spike testleri yalnızca yerelde, Bölüm 3.10'daki komutlarla çalışır; bu, plan 0B ve 0C'nin "spike varsayılan reaktörde değildir" kısıtıdır.
 
 ### 5.4 Duman ve E2E testi
 
@@ -1054,7 +1278,7 @@ deploy/compose/smoke.sh
 ERP_APP_IMAGE=erp-app:local SKIP_BUILD=1 deploy/compose/smoke.sh
 ```
 
-Her iki biçim de Faz 0A'da doğrulanmıştır (`SKIP_BUILD=1` ile yalnızca `erp-postgres:local` derlenir); Faz 0B'de ilk biçim yeniden çalıştırılmış ve geçmiştir. Doğrulama makinesinde Docker katman önbelleği doluyken süre 20–30 saniyedir (Faz 0B'de 21 saniye); ilk çalıştırma imaj indirme ve derleme nedeniyle daha uzun sürer (ölçülmedi). Registry'deki bir digest ile çalıştırma (CI biçimi) yerelde doğrulanmamıştır.
+Her iki biçim de Faz 0A'da doğrulanmıştır (`SKIP_BUILD=1` ile yalnızca `erp-postgres:local` derlenir); Faz 0B ve 0C'de ilk biçim yeniden çalıştırılmış ve geçmiştir. Doğrulama makinesinde Docker katman önbelleği doluyken süre 20–30 saniyedir (Faz 0B'de 21, Faz 0C'de 30 saniye); ilk çalıştırma imaj indirme ve derleme nedeniyle daha uzun sürer (ölçülmedi). Registry'deki bir digest ile çalıştırma (CI biçimi) yerelde doğrulanmamıştır.
 
 ### 5.5 Migration ve yükseltme akışı
 
@@ -1067,6 +1291,8 @@ S1 spike'ı §4.6'daki "migration ayrı adımdır" ilkesini sınamıştır:
 - Açılışta şema kuran her şey kapalıdır: `spring.sql.init.mode: never`, `spring.jpa.hibernate.ddl-auto: none`, `spring.modulith.events.jdbc.schema-initialization.enabled: false` (B3, B4).
 - Spike'ta `flyway-core` yalnızca test kapsamındadır. Boot 4'te Flyway otomatik yapılandırması yalnızca `spring-boot-flyway` sınıf yolundayken çalışır; Faz 2 orkestratörü Flyway API'sini doğrudan kullanır, `spring-boot-starter-flyway` eklenmez (B17).
 - Flyway 12.4.0 (OSS) PostgreSQL 18.6'ya migration'ları sorunsuz uygulamıştır. Flyway/Liquibase lisans teyidi plan 0E'dedir.
+
+S2 spike'ı aynı ilkeyi platform DB'si için izler: `db/platform` altındaki `V202610061200__tenant_registry.sql` (`tenant`, `tenant_domain`) ve `V202610061201__spring_session.sql` fixture tarafından uygulanır. İkincisi spring-session-jdbc 4.1.1'in PostgreSQL şema betiğinin (jar içindeki schema-postgresql.sql) birebir kopyasıdır ve Spring Session yükseltildiğinde yeniden kopyalanır. Spring Session'ın şema kurulumu kapalıdır (`spring.session.jdbc.initialize-schema: never`).
 
 ### 5.6 Sistemin ayakta olduğunu kanıtlayan komutlar
 
@@ -1144,7 +1370,7 @@ Shell bu hatayı kullanıcıya şöyle yansıtır: `useSystemInfo()` sorgusu hat
 | PostgreSQL erişilemez | Uygulama açılır; `/actuator/health` ve `/readiness` 503 `DOWN`, `/liveness` 200, `/api/v1/system/info` 200 | Shell sürümü gösterir, uyarı yok | `DatabaseUnavailableTests`; imaj veritabanısız çalıştırılarak doğrulandı |
 | PostgreSQL şifresi yanlış | Aynı | Aynı | `DatabaseWrongPasswordTests` |
 | `dev` profili verilmeden yerel çalıştırma | Şifre boş; `readiness` 503 `DOWN`, `info` 200 | Aynı | Elle doğrulandı (Bölüm 3.4) |
-| Keycloak kapalı | Etkisi yok; uygulama henüz Keycloak'a bağlanmıyor | — | Uygulama yapılandırmasında Keycloak yok |
+| Keycloak kapalı | Etkisi yok; ürün uygulaması henüz Keycloak'a bağlanmıyor (S2 spike'ındaki davranış Bölüm 6.5'tedir) | — | Uygulama yapılandırmasında Keycloak yok |
 | Mailpit kapalı | Etkisi yok; uygulama henüz posta göndermiyor | — | — |
 | Backend erişilemez (ağ hatası) | `ApiError` (`status` 0) | "Sunucuya ulaşılamıyor" uyarısı, sayfa içeriği çizilir | `http.test.ts`, `ErpShell.test.ts` |
 | Proxy HTML 502 sayfası ya da JSON olmayan gövde | `ApiError` (`problem` yok) | Aynı uyarı | `http.test.ts`, `ErpShell.test.ts`; Vite proxy'nin 502'si elle doğrulandı |
@@ -1208,6 +1434,18 @@ Kod yolları `spikes/s1-tenancy/src/main/java/com/smart/erp/spike/s1/` altındad
 | 4 | Askıdaki ya da DB'si erişilemeyen tenant'ın işi görünür biçimde başarısız olur ve tekrar denenir; diğer tenant'lar devam eder; veri başka yere yazılmaz | `TenantExecutionInterceptor`, routing reddi, db-scheduler'ın `OneTimeTask` yeniden deneme davranışı; `TenantEventRepublisher` (tenant başına `try/catch`, `RepublishReport`) | `TenantJobTests.aJobForASuspendedTenantFailsVisiblyAndWaitsForARetry`, `TenantEventRepublisherTests.anUnreachableTenantIsReportedAndDoesNotStopTheOthers` | ✅ |
 | 5 | Olayın ikinci teslimi işi ikinci kez planlamaz; havuzdaki thread önceki görevin tenant'ını taşımaz | `SampleRecordedListener` (`scheduleIfNotExists`, iş örneği kimliği = `eventId`), `TenantTaskDecorator`, `TenantContext` (kapsam bitince önceki değer) | `TenantJobTests` (`theEventIdIsTheJobInstanceId...`, `aRedeliveryAfterTheJobCompleted...`), `TenantTaskDecoratorTests.theWorkerDoesNotKeepTheTenantForTheNextTask` | ⚠️ Tekilleştirme yalnızca iş satırı dururken; iş tamamlandıktan sonraki teslim işi yeniden çalıştırır, işler idempotent olmalı (B15) |
 
+#### Plan 0C (S2 kimlik spike'ı)
+
+Kod yolları `spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/` altındadır; test sınıfları aynı paket yapısıyla `src/test/java` altındadır.
+
+| # | Beklenen davranış | Sağlayan kod | Kanıtlayan test | Durum |
+|---|---|---|---|---|
+| 1 | İpucu başka bir organization'la ya da `organization:*` ile değiştirilir, silinir ya da kullanıcı üye değildir: giriş 403, kimliği doğrulanmış oturum oluşmaz | `TenantOidcUserService` (ID token'da `iss` ve tam organization kümesi), `SecurityConfiguration` (`loginFailed`: yönlendirme yerine 403) | `OrganizationClaimCheckTests` (4 test) | ✅ Reddi Keycloak değil uygulama verir (S2 B1, B2) |
+| 2 | Çerez başka host'a taşınır, callback başka host'ta tekrar oynatılır ya da mali müşavirin iki oturumu karışır: 401 ya da 403, diğer tenant'ın bağlamı kurulmaz | `BrowserTenantFilter` (`sessionBelongsTo`), `TenantOidcUser` (`<tenant>:<sub>`), `TenantOidcUserService` | `SessionTenantBindingTests` (`sessionCookieReplayed...`, `callbackReplayedOnAnotherHostDoesNotLogIn`, `oneUserGetsOneIndependentSessionPerTenant`) | ✅ Callback tekrarını Spring değil iddia kontrolü durdurur (S2 B3) |
+| 3 | Host varyantları (büyük harf, Türkçe `İ`, sondaki nokta, `_`, tam genişlikli karakter, IP literal, boş, kayıtsız host) normalleşir ya da 404 alır; varsayılan tenant yoktur; `X-Forwarded-Host`'un etkisi sabittir | `TenantHost.normalize`, `BrowserTenantFilter`, `server.forward-headers-strategy: native` | `TenantHostTests`, `BffLoginTests` (`unknownHostIs404AndStartsNoLogin`, `forwardedHostFromATrustedProxyDecidesTheTenant`) | ⚠️ Boot varsayılanında her özel ağ adresi güvenilen proxy'dir; `internal-proxies` Faz 1/7'de daraltılır (S2 B17) |
+| 4 | Kardeş alt alan adından CSRF: basılmış double-submit çerezi, başka oturumun token'ı, token'sız çıkış 403 alır | Spring Security varsayılanı (`HttpSessionCsrfTokenRepository`, XOR maskesi), `/bootstrap` | `CsrfTests`, `LogoutTests.logoutWithoutTheTokenIs403AndKeepsTheSession` | ✅ |
+| 5 | Geçerli ama yanlış bearer token: iddiasız, iki organization'lı, kayıtsız organization'lı, audience'sız, yabancı anahtarlı token 401; başka tenant'ın host'u 403; askıdaki tenant 503; geçersiz token oturum çerezine düşmez, oturum oluşmaz | `bearerChain` (`hasBearerToken`), `TenantJwtAuthenticationConverter`, `BearerTenantFilter`, `SessionlessRequestFilter`, `audiences: erp-api` | `BearerChainTests` (13 test), `TenantJwtAuthenticationConverterTests` | ⚠️ Token'sız çıplak `Authorization: Bearer` başlığı tarayıcı zincirine düşer (S2 B24, Faz 1) |
+
 ### 6.4 Tenant'a bağlı hata durumları (S1 spike'ı)
 
 Ürün uygulamasında tenant olmadığı için bu davranışlar bugün yalnızca spike'ta vardır.
@@ -1224,9 +1462,30 @@ Kod yolları `spikes/s1-tenancy/src/main/java/com/smart/erp/spike/s1/` altındad
 
 Sağlık: spike'ta `readiness` grubu `readinessState` ve `db` göstergelerini içerir; `management.health.db.ignore-routing-data-sources: true` ile `db` göstergesi yalnızca platform DB'sini denetler. Tenant DB'leri readiness konusu değildir (B8). Platform DB'si kapalıyken davranış spike'ta denenmemiştir.
 
+### 6.5 Kimliğe bağlı hata durumları (S2 spike'ı)
+
+Spike'ta Problem Details yoktur: tenant ve oturum kararları gövdesiz statü kodlarıyla, giriş hatası `text/plain` bir hata koduyla, bearer hataları Spring Security'nin `WWW-Authenticate` başlığıyla döner. `BrowserTenantFilter` statüleri doğrudan yazar, çünkü hata dispatch'i zincire tenant'sız yeniden girer (S2 B23).
+
+| Durum | Tarayıcı zinciri | Bearer zinciri | Kanıt |
+|---|---|---|---|
+| Kayıtsız host (ör. `unknown.erp.test`) | 404, giriş başlamaz | Tenant'ı token belirler (nötr host, ör. `api.erp.test`) | `BffLoginTests.unknownHostIs404AndStartsNoLogin`, `BearerChainTests.integrationClientIsServedInItsTenant` |
+| Tenant `ACTIVE` değil | 503; giriş de başlamaz | 503 | `SessionTenantBindingTests.suspendedTenantRefusesSessionsAndLogins`, `BearerChainTests.suspendedTenantsTokenIs503` |
+| Oturum yok | `/api/**` ve `/bootstrap` 401 (yönlendirme yok, SPA `fetch` ile görür); sayfalar giriş ucuna 302 | — | `BffLoginTests.withoutASessionTheApiAnswers401AndPagesRedirectToLogin`, `CsrfTests.bootstrapWithoutASessionIs401` |
+| Başka tenant'ın oturum çerezi | 401, WARN logu; oturum silinmez | — | `SessionTenantBindingTests.sessionCookieReplayedOnAnotherTenantsHostIs401` |
+| Kurcalanmış ipucu, üye olmayan kullanıcı, başka host'ta callback | 403, gövde `tenant_mismatch`; oturum açılmaz | — | `OrganizationClaimCheckTests`, `SessionTenantBindingTests.callbackReplayedOnAnotherHostDoesNotLogIn` |
+| CSRF token'ı yok ya da başka oturumun | 403 | CSRF denetlenmez | `CsrfTests`, `BearerChainTests.bearerPostNeedsNoCsrfToken` |
+| Token geçersiz: imza, audience, organization sayısı, kayıtsız organization | — | 401, `WWW-Authenticate` içinde `invalid_token` | `BearerChainTests`, `TenantJwtAuthenticationConverterTests` |
+| Token başka tenant'ın host'unda | — | 403, gövdesiz | `BearerChainTests.tokenOnAnotherTenantsHostIs403` |
+| Bearer ile `/api/**` dışı yol (ör. `/bootstrap`) | — | 403 (rapora göre `insufficient_scope`) | `BearerChainTests.bootstrapIsNotABearerEndpoint` |
+| Keycloak erişilemez | Uygulama açılır, readiness 200; giriş 5xx (whitelabel 500) ve ERROR seviyesinde yığın logu; sonraki giriş discovery'yi yeniden dener | Boot'un decoder'ı tembeldir (yeniden deneme testle sınanmadı) | `KeycloakUnavailableTests`, `LazyClientRegistrationRepositoryTests.failedDiscoveryIsRetriedOnTheNextLogin` |
+
+> ⚠️ Keycloak kesintisinde kullanıcının gördüğü whitelabel 500 sayfası ve her denemede ERROR seviyesinde yazılan tam yığın Faz 1 açık maddesidir (S2 B6, açık madde 1). Güvenlik olaylarının (girişte `tenant_mismatch`, bearer host ile tenant uyuşmazlığı) loglanması da eksiktir; bugün yalnızca başka tenant'ın oturumu için oran sınırsız bir WARN satırı yazılır (S2 B28, açık madde 11).
+
+Sağlık: actuator zinciri `/actuator/health/**`'ı tenant host'u olmadan karşılar; readiness yalnızca platform DB'sidir (`ignore-routing-data-sources: true`). İç adreste `/actuator/health/**` dışındaki her yol, `/actuator/info` dahil, `BrowserTenantFilter`'dan 404 alır (S2 B25).
+
 ## 7. Modül rehberleri
 
-Ürün kodunda bir Spring Modulith uygulama modülü (`system`), bir platform test modülü (`platform-test`) ve beş frontend paketi vardır. İş modülü yoktur. Ürün modüllerinin tablosu, yayınladığı ya da dinlediği olayı ve SPI'ı yoktur. Bölüm 7.8–7.11, S1 spike'ının dört modülünü anlatır; tablo ve olay yalnızca bu spike modüllerinde vardır ve ER diyagramı Bölüm 7.11'dedir.
+Ürün kodunda bir Spring Modulith uygulama modülü (`system`), bir platform test modülü (`platform-test`) ve beş frontend paketi vardır. İş modülü yoktur. Ürün modüllerinin tablosu, yayınladığı ya da dinlediği olayı ve SPI'ı yoktur. Bölüm 7.8–7.11 S1 spike'ının, Bölüm 7.12–7.15 S2 spike'ının dört modülünü anlatır. Tablo ve olay yalnızca spike modüllerinde vardır; ER diyagramları Bölüm 7.11 ve 7.14'tedir.
 
 ### 7.1 `system` (backend, `com.smart.erp.system`)
 
@@ -1276,11 +1535,11 @@ SystemInfoController ..> SystemInfoResponse
 |---|---|
 | Amacı | Paylaşılan test altyapısı (§14): mimari kurallar ve PostgreSQL Testcontainer'ı |
 | Açık API | `ErpArchitectureRules.NO_SPRING_SCHEDULING`, `ErpArchitectureRules.NO_LOCALE_LESS_CASE_CONVERSION`; `PostgresTestcontainer` (`IMAGE = "postgres:18.6"`, `@ServiceConnection` bean'i, `newContainer()`) |
-| Kullananlar | `erp-app` test kapsamında: `ArchitectureRulesTests`, `ErpIntegrationTest`, `DatabaseWrongPasswordTests`; spike'ta `ArchitectureRulesTests` ve `SpikeDatabases` |
+| Kullananlar | `erp-app` test kapsamında: `ArchitectureRulesTests`, `ErpIntegrationTest`, `DatabaseWrongPasswordTests`; iki spike'ta da `ArchitectureRulesTests` ve `SpikeDatabases` |
 | Kritik kurallar | Test veritabanı compose ile aynı initdb argümanlarıyla açılır (`--encoding=UTF8 --locale-provider=builtin --builtin-locale=C.UTF-8`); gömülü veritabanı (H2 vb.) kullanılmaz |
 | Testler | `ErpArchitectureRulesTests` ve `fixtures/` altındaki bilerek kural ihlal eden sınıflar; `PostgresTestcontainerTests` |
 
-`PostgresTestcontainer.newContainer()` Faz 0B'de eklenmiştir: aynı imaj ve initdb argümanlarıyla, başlatılmamış bir konteyner döner. Birden çok veritabanı kuran fixture'lar (bugün `SpikeDatabases`) bunu kullanır; `@ServiceConnection` bean'i de artık bu metottan üretilir. `PostgresTestcontainerTests`, dönen konteynerin imajını ve `POSTGRES_INITDB_ARGS` değerini doğrular.
+`PostgresTestcontainer.newContainer()` Faz 0B'de eklenmiştir: aynı imaj ve initdb argümanlarıyla, başlatılmamış bir konteyner döner. Kendi rolünü ve veritabanlarını kuran fixture'lar (bugün iki spike'ın `SpikeDatabases` sınıfları) bunu kullanır; `@ServiceConnection` bean'i de artık bu metottan üretilir. `PostgresTestcontainerTests`, dönen konteynerin imajını ve `POSTGRES_INITDB_ARGS` değerini doğrular.
 
 `PostgresTestcontainer.IMAGE` ile `deploy/compose/postgres/Dockerfile` içindeki `FROM postgres:18.6` aynı sürümde tutulur; `renovate.json`'daki özel yöneticiler ve "PostgreSQL image" grubu ikisini tek PR'da günceller (commit `2dbc596`). `TestDatabaseLocaleTests` test veritabanının `UTF8`, `builtin` sağlayıcı (`b`) ve `datlocale = C.UTF-8` ile açıldığını doğrular.
 
@@ -1515,9 +1774,226 @@ sample_record {
 }
 ```
 
+### 7.12 Spike: S2 `kernel` (`com.smart.erp.spike.s2.kernel`)
+
+Bölüm 7.12–7.15'teki sınıflar `spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/` altındadır. Modüller arası bağımlılık yönü `sample → identity → tenancy → kernel` biçimindedir (`sample` ve `identity` ayrıca `kernel`'i kullanır); spike `ModularityTests` bunu doğrular.
+
+S1'deki `kernel`'in kopyasıdır (Bölüm 7.8): `TenantKey`, `TenantContext`, `MissingTenantContextException`, `TenantSwitchInTransactionException`; `UuidV7` yoktur. Tek fark, `TenantKey`'in `Serializable` olmasıdır: oturumdaki principal (`TenantOidcUser`) onu taşır ve oturum Java serileştirmesiyle platform DB'sine yazılır. `TenantKey` bir record olduğu için okunurken kanonik kurucudan geçer; biçim kuralı daralırsa eski oturumlar okunamaz (S2 B13, B20). Testler: `TenantKeyTests`, `TenantContextTests`.
+
+### 7.13 Spike: S2 `tenancy` (`com.smart.erp.spike.s2.tenancy`)
+
+| Konu | İçerik |
+|---|---|
+| Amacı | §4.3: platform DB'si, tenant kaydı ve host eşlemesi; Faz 1'in routing DataSource'unun yer tutucusu |
+| Açık tipler | `PlatformDb`, `PlatformDataSourceProperties`, `TenantStatus`, `TenantRecord` (`key`, `status`, `issuer`, `organizationAlias`), `TenantDirectory` (`findByHost`, `findByIdentity`, `require`), `TenantHost` (`normalize`), `TenantDataSourceStandIn` (`requests()`) |
+| İç tipler | `PlatformDataSourceConfiguration`, `JdbcTenantDirectory` |
+| Tablolar | Platform DB'sinde `tenant` ve `tenant_domain` (okur; şemayı migration kurar) |
+| Testler | `TenantHostTests`, `JdbcTenantDirectoryTests`, `TenantDataSourceStandInTests`, `SpikeDatabasesTests` |
+
+`PlatformDataSourceConfiguration` üç bean kurar:
+
+| Bean | Ne yapar | Neden böyle |
+|---|---|---|
+| `platformDataSource` | Platform DB'sine Hikari havuzu (`erp.platform.datasource.*`) | `@Bean(defaultCandidate = false)` + `@PlatformDb` + `@SpringSessionDataSource`: niteliksiz tüketiciler onu almaz, Spring Session kendi niteleyicisiyle bulur (ADR-0015, ADR-0039) |
+| `tenantDirectory` | `JdbcTenantDirectory`; kaydı platform DB'sinden önbelleksiz okur, durum her aramada okunur | Önbellek (Caffeine + LISTEN/NOTIFY, ADR-0016) Faz 2'dedir (S2 B11) |
+| `tenantDataSource` | `TenantDataSourceStandIn`: tek varsayılan aday DataSource | Her bağlantı isteğini sayar ve `MissingTenantContextException` ile reddeder; böylece "bu bileşen tenant DB'sine dokundu" testlerde bir sayıya dönüşür |
+
+Yer tutucu `AbstractRoutingDataSource`'u genişletir; bu sayede `management.health.db.ignore-routing-data-sources: true` onu sağlık denetiminin dışında tutar. `unwrap` ve `isWrapperFor` yönlendirmez ve sayılmaz, çünkü Boot'un metrik ve sağlık bağlaması onları tenant'sız çağırıp hatayı yutar.
+
+Tenant anahtarı ile host ayrı kavramlardır. Organization bağı `tenant` satırındadır (`oidc_issuer`, `organization_alias`; ikisi birlikte tekil); `tenant_domain` yalnızca host → tenant eşlemesidir. Bir tenant'ın birden çok host'u olabilir ve bearer isteğinin anlamlı bir host'u yoktur (S2 B19, §4.3). `TenantHost.normalize` host'u aramadan önce sadeleştirir:
+
+```java
+// tenancy/TenantHost.java:14, 18-31 (kısaltıldı, satırlar kırıldı)
+Pattern LABEL = Pattern.compile("[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?");
+if (serverName == null || serverName.isEmpty()
+        || serverName.length() > 254) {
+    return Optional.empty();
+}
+String host = serverName.toLowerCase(Locale.ROOT);
+if (host.endsWith(".")) {
+    host = host.substring(0, host.length() - 1);
+}
+// her etiket LABEL'a uymalı, yoksa Optional.empty()
+```
+
+Yalnızca düz ASCII DNS adları geçer; `_`, Türkçe `İ` ve tam genişlikli karakter içeren ad hiçbir tenant'a eşlenmez (404). `TenantKey` `_` içerebildiği halde DNS etiketi içeremez; bu uyumsuzluk Faz 2 kararıdır (S2 B20).
+
+### 7.14 Spike: S2 `identity` (`com.smart.erp.spike.s2.identity`)
+
+| Konu | İçerik |
+|---|---|
+| Amacı | §6.3.1 ve ADR-0005, ADR-0006, ADR-0039, ADR-0040: BFF girişi, platform DB'sinde oturum, CSRF, bearer zinciri, tenant'ın her istekte bağlanması |
+| Açık tipler | `KeycloakOrganizations` (`CLAIM`, `scopeFor`, `aliases`), `TenantOidcUser` (`tenant()`, adı `<tenant>:<sub>`), `TenantJwtAuthentication` (`tenant()`), `IdentityProperties` (`erp.identity.*`) |
+| İç tipler | `SecurityConfiguration`, `SessionConfiguration`, `BrowserTenantFilter`, `BearerTenantFilter`, `TenantFilterChain`, `SessionlessRequestFilter`, `TenantOidcUserService`, `TenantJwtAuthenticationConverter`, `LazyClientRegistrationRepository`, `DiscardingAuthorizedClientRepository` |
+| Tablolar | Platform DB'sinde `spring_session` ve `spring_session_attributes` (Spring Session yazar) |
+| Bağımlılıklar | `tenancy` (`TenantDirectory`, `TenantHost`, `TenantRecord`, `TenantStatus`, `PlatformDb`), `kernel` (`TenantContext`, `TenantKey`) |
+| Testler | `BffLoginTests`, `OrganizationClaimCheckTests`, `SessionTenantBindingTests`, `CsrfTests`, `LogoutTests`, `BearerChainTests`, `SessionWiringTests`, `TenantJwtAuthenticationConverterTests`, `KeycloakOrganizationsTests`, `LazyClientRegistrationRepositoryTests`; ayrıca kök paketteki `StartupIsolationTests`, `KeycloakUnavailableTests` ve `keycloak` altındaki öğrenme testleri |
+
+Tarayıcı tarafının sınıfları:
+
+```mermaid
+classDiagram
+class BrowserTenantFilter {
+  #doFilterInternal(request, response, chain)
+  -sessionBelongsTo(TenantKey) boolean
+}
+class TenantFilterChain {
+  +proceed(TenantKey, FilterChain, request, response)$
+}
+class TenantOidcUserService {
+  +loadUser(OidcUserRequest) OidcUser
+}
+class TenantOidcUser {
+  +tenant() TenantKey
+  +getName() String
+}
+class KeycloakOrganizations {
+  +String CLAIM$
+  +scopeFor(String) String$
+  +aliases(Object) Set$
+}
+class LazyClientRegistrationRepository {
+  +findByRegistrationId(String) ClientRegistration
+}
+class DiscardingAuthorizedClientRepository {
+  +saveAuthorizedClient() void
+}
+class TenantDirectory {
+  <<interface>>
+  +findByHost(String) Optional
+  +findByIdentity(String, String) Optional
+  +require(TenantKey) TenantRecord
+}
+BrowserTenantFilter --> TenantDirectory
+BrowserTenantFilter ..> TenantFilterChain
+BrowserTenantFilter ..> TenantOidcUser
+TenantOidcUserService --> TenantDirectory
+TenantOidcUserService ..> KeycloakOrganizations
+TenantOidcUserService ..> TenantOidcUser
+```
+
+Bearer zincirinde filtrelerin sırası:
+
+```mermaid
+flowchart LR
+A[SessionlessRequestFilter<br>oturum gizlenir]
+B[BearerTokenAuthenticationFilter<br>imza, iss, aud]
+C[TenantJwtAuthenticationConverter<br>iss + organization ile tenant]
+D[BearerTenantFilter<br>durum ve host]
+E[TenantFilterChain<br>TenantContext.run]
+F[Controller<br>TenantContext.require]
+A --> B
+B --> C
+C --> D
+D --> E
+E --> F
+```
+
+Bileşenlerin görevleri:
+
+| Bileşen | Ne yapar | Neden böyle |
+|---|---|---|
+| `KeycloakOrganizations` | İpucu biçimi `organization:<alias>` ve iddianın şekli (`["acme"]` ya da `{"acme": {...}}`) | Uygulama kodundaki Keycloak'a özgü tek bilgi (ADR-0005); biçimi bozuk iddia hiçbir organization'ı adlandırmaz |
+| `LazyClientRegistrationRepository` | Tek client registration'ı (`keycloak`) ilk girişte keşfeder; yalnızca başarılı sonucu saklar | Boot'un `issuer-uri`'li kaydı açılışta Keycloak'a gider ve uygulamayı düşürür (S2 B6). `registrationId("keycloak")` açıkça verilir, `requireProofKey(true)` ile PKCE gizli istemcide de eklenir (S2 B5) |
+| `DiscardingAuthorizedClientRepository` | Girişin access ve refresh token'ını atar | BFF aşağı akışta API çağırmaz; Boot'un bellek içi deposu token'ları sınırsız biriktirirdi (S2 B8) |
+| `TenantOidcUserService` | Callback'te ID token'ın `iss`'ini ve organization kümesini host'un tenant'ıyla karşılaştırır, `TenantOidcUser` döner | İpucu kullanıcının elindedir, imzalı ID token değildir; callback tekrarına karşı tek savunma (S2 B2, B3) |
+| `BrowserTenantFilter` | Host → tenant; 404, 503, 401; CSRF, logout ve OAuth2 filtrelerinden önce çalışır | İpucu ve giriş kontrolü host'un tenant'ını görmelidir (S2 B14) |
+| `SessionlessRequestFilter` | Bearer isteğinde oturumu her dispatch tipinde (istek, hata, async) gizler | `STATELESS` Spring Session arkasında durumsuzluk vermez (S2 B22, B23) |
+| `TenantJwtAuthenticationConverter`, `BearerTenantFilter` | Tam olarak bir organization ister, `(iss, alias)` ile tenant'ı bulur; durum ve host'u denetler | Tenant token'dan çözülür, host'un tenant'ı varsa onunla uyuşmalıdır (S2 B21) |
+| `TenantFilterChain` | Zincirin geri kalanını `TenantContext.run` içinde çalıştırır | Bağlama istekle biter, havuzdaki thread bayat tenant taşımaz |
+
+> ⚠️ Tenant ve oturum filtreleri bean değildir; zincirlere `new` ile eklenir. `@Component` olsalardı Boot onları her isteğe uygulanan global servlet filtresi olarak kaydeder, tarayıcı oturumları ve nötr host'taki bearer çağrıları bozulurdu (`docs/spikes/s2-identity.md`, "Korunacak kısıtlar").
+
+Spring Session'ın transaction kancası `SessionConfiguration`'dadır. Kanca olmadan Spring Session bağlamdaki tek transaction yöneticisini, yani varsayılan (tenant) DataSource üzerindekini alır (S2 B7, Bölüm 4.8'deki alıştırmalar):
+
+```java
+// identity/SessionConfiguration.java:21-26 (satırlar kırıldı)
+@Bean(name = "springSessionTransactionOperations",
+        defaultCandidate = false)
+TransactionOperations springSessionTransactionOperations(
+        @PlatformDb DataSource platform) {
+    TransactionTemplate transactions = new TransactionTemplate(
+            new DataSourceTransactionManager(platform));
+    transactions.setPropagationBehavior(
+            TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    return transactions;
+}
+```
+
+Oturum, çerez ve proxy ayarları `application.yaml`'dadır:
+
+```yaml
+# spikes/s2-identity/src/main/resources/application.yaml:2, 6-22
+# (yorumlar atıldı)
+spring:
+  security.oauth2.resourceserver.jwt:
+    issuer-uri: ${erp.identity.issuer-uri}
+    audiences: erp-api
+  session:
+    timeout: 30m
+    jdbc.initialize-schema: never
+    jdbc.cleanup-cron: "-"
+server:
+  forward-headers-strategy: native
+  servlet.session.cookie:
+    name: __Host-SESSION
+    secure: true
+    http-only: true
+    same-site: lax
+    path: /
+```
+
+Kritik kurallar: oturumda access ve refresh token yoktur, yalnızca principal'ın ID token'ı vardır; RP-initiated logout `id_token_hint`'i buradan alır ve ID token tarayıcıdan bir kez, Keycloak'a giden 302'nin `Location`'ında geçer (belgelenmiş istisna, S2 B9). `spring.session.timeout` yalnızca boşta kalma süresidir; oturumun mutlak ömrü yoktur ve Keycloak'taki iptal oturuma yansımaz (S2 B10, `docs/open-questions.md` soru 3). `cleanup-cron: "-"` ile Spring Session'ın zamanlayıcısı kapalıdır (K12); süresi dolan oturumları Faz 1'de bir db-scheduler işi silecektir (S2 B12). Çıkış (`POST /logout`) CSRF token'ı ister, oturumu siler ve Keycloak SSO oturumunu bitirir; aynı kullanıcının başka tenant'taki oturumu yaşamaya devam eder.
+
+Modülün tabloları (Spring Session 4.1.1 şeması; `SPRING_SESSION` için seçilmiş altı kolon gösterilmiştir) ve `tenancy`'nin okuduğu tablolar:
+
+```mermaid
+erDiagram
+tenant ||--o{ tenant_domain : "host eşlemesi"
+SPRING_SESSION ||--o{ SPRING_SESSION_ATTRIBUTES : "öznitelikler"
+tenant {
+  text tenant_key
+  text status
+  text oidc_issuer
+  text organization_alias
+}
+tenant_domain {
+  text host
+  text tenant_key
+}
+SPRING_SESSION {
+  char PRIMARY_ID
+  char SESSION_ID
+  bigint LAST_ACCESS_TIME
+  int MAX_INACTIVE_INTERVAL
+  bigint EXPIRY_TIME
+  varchar PRINCIPAL_NAME
+}
+SPRING_SESSION_ATTRIBUTES {
+  char SESSION_PRIMARY_ID
+  varchar ATTRIBUTE_NAME
+  bytea ATTRIBUTE_BYTES
+}
+```
+
+`PRINCIPAL_NAME`, `TenantOidcUser`'ın adını (`<tenant>:<sub>`) taşır; Spring Session'ın principal index'i bir `(kullanıcı, tenant)` çiftinin oturumlarını bulur, bir kullanıcının bütün tenant'lardaki oturumlarını tek seferde bulamaz (S2 B10). Oturum tablosu ile tenant tabloları arasında yabancı anahtar yoktur.
+
+### 7.15 Spike: S2 `sample` (`com.smart.erp.spike.s2.sample`)
+
+Güvenlik zincirlerinin arkasındaki uygulama: kimin hangi tenant'ta girdiğini göstermeye yetecek kadar uç içerir (`SampleController`).
+
+| Uç | Zincir | Yanıt |
+|---|---|---|
+| `GET /` | Tarayıcı | `ok` (girişten sonraki açılış sayfası) |
+| `GET /bootstrap` | Yalnızca tarayıcı | `Bootstrap`: `tenant`, `subject`, `name`, `csrfHeader` (`X-CSRF-TOKEN`), `csrfToken` (her yanıtta farklı XOR maskeli değer) |
+| `GET /api/whoami` | Tarayıcı ve bearer | `WhoAmI`: `tenant`, `name`, `authentication` (`OAuth2AuthenticationToken` ya da `TenantJwtAuthentication`) |
+| `POST /api/echo` | Tarayıcı ve bearer | `{"tenant": "acme"}`; tarayıcıda CSRF token'ı ister |
+
+`/bootstrap`, §8.1'deki `GET /api/v1/bootstrap`'ın deneme sürümüdür ve CSRF alanları yüzünden tarayıcıya özeldir; bearer zincirinde 403 alır. Bearer istemcilere açılıp açılmayacağı açık sorudur (S2 B16, `docs/open-questions.md` soru 2). Controller tenant'ı `TenantContext.require()` ile okur; tablo ve olay yoktur.
+
 ## 8. Uygulamalı el kitabı
 
-Tarifler depodaki gerçek konvansiyonları izler. Bölüm 8.1 ve 8.2'deki örnekler kılavuz hazırlanırken depoya geçici olarak eklenmiş, tüm kontrollerden geçtiği görülmüş ve geri alınmıştır; depoda bulunmazlar. Bölüm 8.1 Faz 0B'de yeniden denenmiştir; Bölüm 8.2 Faz 0A'da denenmiştir ve ilgili önyüz dosyaları o tarihten beri değişmemiştir. Bölüm 8.6, spike'taki mevcut örnek akışı adım adım açıklar.
+Tarifler depodaki gerçek konvansiyonları izler. Bölüm 8.1 ve 8.2'deki örnekler kılavuz hazırlanırken depoya geçici olarak eklenmiş, tüm kontrollerden geçtiği görülmüş ve geri alınmıştır; depoda bulunmazlar. Bölüm 8.1 Faz 0B'de yeniden denenmiştir; Bölüm 8.2 Faz 0A'da denenmiştir ve ilgili önyüz dosyaları o tarihten beri değişmemiştir. Bölüm 8.6, S1 spike'ındaki mevcut örnek akışı adım adım açıklar. Bölüm 8.7'deki örnek Faz 0C'de S2 spike'ına geçici olarak eklenmiş, `verify`'dan geçtiği görülmüş ve geri alınmıştır.
 
 ### 8.1 Yeni backend REST ucu
 
@@ -1731,13 +2207,15 @@ S1 spike'ında migration eklemek (yalnızca spike'ın kendi testleri için):
 
 Bu tarif spike'taki mevcut iki tenant migration'ının (`V202610051200__platform_events.sql`, `V202610051201__sample.sql`) izlediği yoldur; kılavuz hazırlanırken yeni bir migration eklenerek ayrıca denenmemiştir (doğrulanmadı).
 
+S2 spike'ında yalnızca platform DB'si vardır; migration'lar `spikes/s2-identity/src/main/resources/db/platform/` altına aynı adlandırmayla yazılır ve `SpikeDatabases` tarafından uygulanır. Üçüncü taraf bir kütüphanenin şeması (bugün Spring Session) elle yazılmaz: kütüphanenin kendi PostgreSQL betiği, kaynağı ve sürümü dosyanın başına yorum olarak yazılıp birebir kopyalanır (`V202610061201__spring_session.sql`).
+
 ### 8.4 Bağımlılık sürümü yükseltmek
 
 Sürüm politikası ADR-0025 ve §11.8'dedir; major yükseltmeler Renovate'te onay ister (`renovate.json`). Bir sürümün değiştiği yerler:
 
 | Bileşen | Sürümün yeri | Birlikte değişmesi gerekenler |
 |---|---|---|
-| Spring Boot (ve yönettiği Testcontainers, JUnit, PostgreSQL JDBC; spike'ın kullandığı Hibernate, jOOQ, Flyway, HikariCP) | Kök `pom.xml` `<parent>` sürümü | Spike yeniden çalıştırılır (Bölüm 3.10): açılış ayarları B4–B6 bu sürümlere bağlıdır |
+| Spring Boot (ve yönettiği Testcontainers, JUnit, PostgreSQL JDBC; S1'in kullandığı Hibernate, jOOQ, Flyway, HikariCP; S2'nin kullandığı Spring Security 7.1.1, Spring Session 4.1.1) | Kök `pom.xml` `<parent>` sürümü | İki spike yeniden çalıştırılır (Bölüm 3.10): S1'in açılış ayarları B4–B6 ve S2'nin bulguları (S2 B5–B8, B22) bu sürümlere bağlıdır; Spring Session değiştiyse `V202610061201__spring_session.sql` yeniden kopyalanır |
 | Spring Modulith, ArchUnit, Error Prone, Spotless, palantir-java-format, license-maven-plugin | Kök `pom.xml` `<properties>` || Modulith yükseltmesinde spike yeniden çalıştırılır: `ModulithTenancySupport` Modulith'in iç bean adlarına bağlıdır |
 | Maven | `.mvn/wrapper/maven-wrapper.properties` | — |
 | Java | `mise.toml` (`temurin-25`), kök `pom.xml` (`java.version`, enforcer) | `deploy/docker/app.Dockerfile` (`eclipse-temurin:25-*`), `.gitlab-ci.yml` (`backend:verify` imajı) |
@@ -1747,7 +2225,8 @@ Sürüm politikası ADR-0025 ve §11.8'dedir; major yükseltmeler Renovate'te on
 | TypeScript | `catalog:` | 6.1'in altında kalır (typescript-eslint 8.71 sınırı, ADR-0029) |
 | Playwright | `catalog:` (`@playwright/test`) | `deploy/docker/e2e.Dockerfile` imaj etiketi |
 | PostgreSQL | `deploy/compose/postgres/Dockerfile` | `PostgresTestcontainer.IMAGE`; major yükseltme Renovate'te kapalıdır (§11.2) |
-| Keycloak, Mailpit | `deploy/compose/compose.yaml` | — |
+| Keycloak | `deploy/compose/compose.yaml` | S2 fixture'ındaki `SpikeKeycloak.IMAGE`; Renovate bu sabiti eşlemez, elle güncellenir. Öğrenme testleri (`KeycloakOrganizationsLearningTests`) yeniden çalıştırılır |
+| Mailpit | `deploy/compose/compose.yaml` | — |
 | gitleaks | `mise.toml` | `.gitlab-ci.yml` (`secrets:gitleaks` imajı) |
 | db-scheduler (yalnızca spike) | `spikes/s1-tenancy/pom.xml` (`db-scheduler.version`) | `db/platform/V202610051201__scheduled_tasks.sql` (tablo, kullanılan sürümün PostgreSQL şemasından alınmıştır) |
 
@@ -1773,16 +2252,28 @@ gitleaks git --config .gitleaks.toml --redact .
 deploy/compose/smoke.sh
 ```
 
-Beklenen son satırlar: `no leaks found`; `BUILD SUCCESS`; `License check passed: 37 production packages.`; `Smoke test passed.` Bu zincir Faz 0B doğrulamasında aynen geçmiştir (gitleaks 42 commit tarar).
+Beklenen son satırlar: `no leaks found`; `BUILD SUCCESS`; `License check passed: 37 production packages.`; `Smoke test passed.` Bu zincir Faz 0C doğrulamasında aynen geçmiştir (gitleaks 58 commit tarar).
 
-Değişiklik `spikes/`, `platform/` ya da kök `pom.xml`'e dokunuyorsa zincire spike eklenir (CI bunu yapmaz, Bölüm 5.3):
+Değişiklik `spikes/`, `platform/` ya da kök `pom.xml`'e dokunuyorsa zincire spike'lar eklenir (CI bunu yapmaz, Bölüm 5.3):
 
 ```bash
 ./mvnw -q install -DskipTests
 ./mvnw -Pspikes -pl spikes/s1-tenancy verify
+./mvnw -Pspikes -pl spikes/s2-identity verify
 ```
 
-**Commit biçimi** Conventional Commits'tir (§14, `CONTRIBUTING.md`). Kapsam modül ya da alan adıdır; depodaki örnekler: `feat(app): ...`, `fix(web): ...`, `build(app): ...`, `test(e2e): ...`, `ci: ...`, `docs(adr): ...`; spike commit'lerinde kapsam `spike`'tır (`feat(spike): ...`, `fix(spike): ...`, `test(spike): ...`). Kırıcı değişiklik `feat(api)!:` ve gövdede `BREAKING CHANGE:` ile işaretlenir. Dallar `main`'den açılır: `feat/<konu>`, `fix/<konu>`, `chore/<konu>`, `docs/<konu>`; müşteri için dal açılmaz (K8).
+Bu kılavuz değiştiyse `mise x -- node scripts/check-guide.mjs` çalıştırılır; son satır `0 hata` ile başlamalıdır (Bölüm 4.2).
+
+Çalışma ağacındaki dosyalar (ör. commit'lenmemiş belgeler) gitleaks ile taranacaksa `gitleaks dir` her yol için ayrı çağrılır:
+
+```bash
+gitleaks dir --config .gitleaks.toml --redact spikes
+gitleaks dir --config .gitleaks.toml --redact docs
+```
+
+gitleaks 8.30.1'de `dir` tek yol alır. İki yol verildiğinde (`... --redact spikes docs`) çalışma ağacının tamamını tarar ve git'in yok saydığı yerel `deploy/compose/.env`'yi bildirir; Faz 0C doğrulamasında bu çağrı `leaks found: 4` vermiş, yukarıdaki iki çağrı `no leaks found` vermiştir. Plan 0B ve 0C'nin doğrulama adımlarındaki iki yollu komut bu yüzden hatalıdır (`docs/spikes/s2-identity.md`, "Plan 0E için girdi").
+
+**Commit biçimi** Conventional Commits'tir (§14, `CONTRIBUTING.md`). Kapsam modül ya da alan adıdır; depodaki örnekler: `feat(app): ...`, `fix(web): ...`, `build(app): ...`, `test(e2e): ...`, `ci: ...`, `docs(adr): ...`; spike commit'lerinde kapsam `spike`'tır (`feat(spike): ...`, `fix(spike): ...`, `test(spike): ...`, `docs(spike): ...`). Kırıcı değişiklik `feat(api)!:` ve gövdede `BREAKING CHANGE:` ile işaretlenir. Dallar `main`'den açılır: `feat/<konu>`, `fix/<konu>`, `chore/<konu>`, `docs/<konu>`; müşteri için dal açılmaz (K8).
 
 **MR şablonu** `.gitlab/merge_request_templates/Default.md`'dir ve üç bölüm içerir: "Ne ve neden" (ilgili ADR ve doküman bölümü), "Nasıl doğrulandı" ve "Kontrol listesi". Kontrol listesi şunları sorar: Conventional Commits, K1–K15 ihlali yok, yeni davranışın testi ve yerelde yeşil kontroller, gerekiyorsa ADR, kırıcı değişiklik yok ya da ADR'li, yeni bağımlılığın lisansı ve sürümünün BOM/catalog'da olması, sır ve kişisel veri eklenmemesi, metinlerin `tr` ve `en` i18n dosyalarında olması. Platform değişikliklerinde platform sahibinin onayı gerekir (§13.2). Pipeline yeşil olmadan merge edilmez (`CONTRIBUTING.md`); hat henüz çalışmadığı için bu kural bugün yerel zincirle karşılanır.
 
@@ -1862,9 +2353,133 @@ void on(SampleRecorded event) {
 
 > ⚠️ Bir zamanlanmış işi `@Scheduled` ile yazmak K12'yi ihlal eder; tekrarlayan işler `RecurringTask` bean'i olarak yazılır (`JobsConfiguration.eventRepublisherTask`). Tekrarlayan bir platform işi tenant'ları kendisi dolaşacaksa ilk çalışmasını açılışa koymamalıdır (`DelayedFixedDelay`, B16).
 
+### 8.7 Kimlik zincirlerinin arkasına uç nokta eklemek (S2 spike kalıbı)
+
+Bu tarif, S2 spike'ında hem tarayıcı oturumuyla hem entegrasyon istemcisinin bearer token'ıyla çağrılan, tenant'a bağlı bir uç noktanın nasıl ekleneceğini ve sınanacağını anlatır. Kurallar §4.4 ve §6.3.1'de, kararlar ADR-0006 ve ADR-0040'tadır. Ürün kodunda kimlik katmanı yoktur; Faz 1'de bulgulara göre yeniden yazılacaktır. Örnek: `POST /api/notes`.
+
+1. Uç nokta `/api/**` altına yazılır. Bu yol iki zincirde de kimlik ister; bearer zinciri `/api/**` dışındaki her yolu reddeder (`anyRequest().denyAll()`). Controller tenant'ı `TenantContext.require()` ile okur. Tenant'ı zincirdeki filtre bağlamıştır; controller host'a ya da token'a bakmaz.
+
+```java
+// spikes/s2-identity/src/main/java/com/smart/erp/spike/s2/sample/
+//   NoteController.java
+package com.smart.erp.spike.s2.sample;
+
+import com.smart.erp.spike.s2.kernel.TenantContext;
+import java.util.Map;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+class NoteController {
+
+    @PostMapping("/api/notes")
+    Map<String, String> add(Authentication authentication) {
+        return Map.of(
+                "tenant", TenantContext.require().value(),
+                "by", authentication.getName());
+    }
+}
+```
+
+2. Ek güvenlik yapılandırması gerekmez. Tarayıcıda durum değiştiren istek oturumun CSRF token'ını ister; SPA token'ı `/bootstrap` yanıtından alır ve `X-CSRF-TOKEN` başlığıyla gönderir. Bearer zincirinde CSRF yoktur. Başka bir tenant'ın token'ı, kayıtlı bir tenant host'unda `BearerTenantFilter`'dan 403 alır.
+
+3. Test `@SpikeTest` ile, uygulamaya gerçek HTTP üzerinden giden `SpikeBrowser` ve token üreten `SpikeKeycloak` ile yazılır. Test tarafında `sample` paketi bugün yoktur; klasör açılır.
+
+```java
+// spikes/s2-identity/src/test/java/com/smart/erp/spike/s2/sample/
+//   NoteControllerTests.java (satırlar kırıldı)
+package com.smart.erp.spike.s2.sample;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.smart.erp.spike.s2.support.SpikeBrowser;
+import com.smart.erp.spike.s2.support.SpikeKeycloak;
+import com.smart.erp.spike.s2.support.SpikeTest;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.web.server.LocalServerPort;
+
+@SpikeTest
+class NoteControllerTests {
+
+    private static final String ACME = "https://acme.erp.test";
+
+    @LocalServerPort
+    int port;
+
+    @Test
+    void theBrowserNeedsTheSessionsCsrfToken() {
+        SpikeBrowser browser = new SpikeBrowser(port);
+        browser.login("acme.erp.test", "ayse");
+        String url = ACME + "/api/notes";
+
+        assertThat(browser.post(url, Map.of(), "Accept", "application/json")
+                        .status())
+                .isEqualTo(403);
+
+        SpikeBrowser.Page bootstrap =
+                browser.get(ACME + "/bootstrap", "Accept", "application/json");
+        String token = (String) SpikeBrowser.json(bootstrap).get("csrfToken");
+        SpikeBrowser.Page page = browser.post(
+                url, Map.of(), "Accept", "application/json",
+                "X-CSRF-TOKEN", token);
+
+        assertThat(page.status()).isEqualTo(200);
+        assertThat(SpikeBrowser.json(page)).containsEntry("tenant", "acme");
+    }
+
+    @Test
+    void anIntegrationClientIsServedInItsTenantWithoutCsrf() {
+        String token = SpikeKeycloak.clientCredentials("acme-integration");
+        SpikeBrowser.Page page = new SpikeBrowser(port).post(
+                "https://api.erp.test/api/notes", Map.of(),
+                "Authorization", "Bearer " + token,
+                "Accept", "application/json");
+
+        assertThat(page.status()).isEqualTo(200);
+        assertThat(SpikeBrowser.json(page)).containsEntry("tenant", "acme");
+    }
+
+    @Test
+    void anotherTenantsTokenIsRefusedOnThisHost() {
+        String token =
+                SpikeKeycloak.clientCredentials("initech-integration");
+        SpikeBrowser.Page page = new SpikeBrowser(port).post(
+                ACME + "/api/notes", Map.of(),
+                "Authorization", "Bearer " + token);
+
+        assertThat(page.status()).isEqualTo(403);
+    }
+}
+```
+
+4. Biçim ve doğrulama:
+
+```bash
+./mvnw -Pspikes -pl spikes/s2-identity spotless:apply
+./mvnw -Pspikes -pl spikes/s2-identity verify
+```
+
+Beklenen: `Tests run: 130, Failures: 0, Errors: 0, Skipped: 0` (yeni üç test dahil) ve `BUILD SUCCESS`. `StartupIsolationTests` yeni bean'in tenant DataSource'una dokunmadığını, `ModularityTests` `sample → kernel` bağımlılığının izinli olduğunu denetler. Spotless, kılavuzdaki 80 karakterlik satırları depodaki 120 karakterlik biçime göre yeniden düzenler.
+
+5. Yeni bir test entegrasyon istemcisi gerekiyorsa `spikes/s2-identity/src/test/resources/keycloak/erp-realm.json` içine mevcut istemcilerin kalıbıyla eklenir: service account açık, `erp-api` audience eşleyicisi ve tenant'ı sabit iddia olarak veren eşleyici. Client secret dosyaya yazılmaz; `SpikeKeycloak` onu Keycloak'tan okur (K9). Bu adım yeni bir istemci eklenerek denenmemiştir (doğrulanmadı).
+
+```json
+{"name": "tenant", "protocol": "openid-connect",
+ "protocolMapper": "oidc-hardcoded-claim-mapper",
+ "config": {"claim.name": "organization",
+            "claim.value": "[\"acme\"]", "jsonType.label": "JSON",
+            "access.token.claim": "true"}}
+```
+
+Kaynak: `erp-realm.json:23-25` (satırlar kırıldı). Sabit iddia, üyelik iddiasıyla aynı şekli (`["acme"]`) verir (S2 B21).
+
+> ⚠️ Faz 1'de tenant DB'sine yazan bir uç noktada bu kalıp Bölüm 8.6'daki kurallarla birleşir: tenant zincirde bağlanır, transaction controller'ın çağırdığı uygulama servisinde açılır (K3). Async uç nokta (`Callable`, `DeferredResult`) açılmamalıdır: inceleme çıkarımına göre `OncePerRequestFilter` tabanlı tenant filtreleri ASYNC dispatch'ini atlar ve async iş `TenantContext` olmadan çalışır (S2 B23, Faz 1 açık madde 4).
+
 ## 9. Sorun giderme
 
-"Kaynak" sütunu sorunun Faz 0A ya da Faz 0B'de gerçekten yaşandığını (commit ya da plan) ya da beklenen bir sorun olduğunu gösterir.
+"Kaynak" sütunu sorunun Faz 0A, 0B ya da 0C'de gerçekten yaşandığını (commit, plan ya da bulgu raporu) ya da beklenen bir sorun olduğunu gösterir.
 
 | Belirti | Neden | Çözüm | Kaynak |
 |---|---|---|---|
@@ -1905,6 +2520,20 @@ void on(SampleRecorded event) {
 | jOOQ, aynı transaction'daki JPA yazmasını görmüyor | Hibernate atanmış kimlikli INSERT'ü flush'a erteler | `FlushBeforeJooqQueryListener` (B13); dinleyicisiz `DSLContext` kullanılmaz | Faz 0B'de gösterildi (`JooqReadTests`) |
 | Tekrarlayan platform işi açılışta her tenant'a havuz açıyor | db-scheduler `FixedDelay` ilk çalışmayı hemen yapar | `DelayedFixedDelay` (B16) | Plan 0B tasarım kararı 8; commit `dafa8dc` |
 | Spike derlemesinde `[NotJavadoc]` uyarısı (`JobsConfiguration.java:[67,13]`) | Anonim sınıf içindeki metotta Javadoc yorumu | Uyarıdır, build'i kırmaz; düz yoruma çevrilebilir | Doğrulandı |
+| `Could not find the selected project in the reactor: spikes/s2-identity` | `-Pspikes` verilmedi | `./mvnw -Pspikes -pl spikes/s2-identity ...` | Doğrulandı |
+| S2 girişinde whitelabel 500, yığında `JdbcSession.save` → `DataSourceTransactionManager.doBegin` → `TenantDataSourceStandIn` | Spring Session'a kendi transaction kancası verilmedi; varsayılan (tenant) DataSource'un yöneticisini aldı. Yer tutucunun `No tenant is bound` mesajı burada yanıltıcıdır | `springSessionTransactionOperations` bean'i, `defaultCandidate = false` (Bölüm 7.14) | Faz 0C'de yaşandı (S2 B7); Bölüm 4.8 alıştırması |
+| `No bean named 'transactionTemplate' available` | Spring Session kancası varsayılan aday yapıldı; Boot `transactionTemplate`'i kurmadı | `defaultCandidate = false` geri konur | Kaynak okuması (S2 B7); Bölüm 4.8 alıştırmasıyla doğrulandı |
+| Keycloak callback'i `error=invalid_request` (`Missing parameter: code_challenge_method`) ile dönüyor | Spring Security 7.1.1 gizli istemcide PKCE'yi kendiliğinden eklemez, Keycloak istemcisi PKCE ister | Kayıtta `requireProofKey(true)` | Faz 0C'de gözlendi (S2 B5) |
+| Redirect URI'sinde `{registrationId}` `keycloak` yerine issuer'ın host adına açılıyor | `ClientRegistrations.fromIssuerLocation` kaydı issuer'ın host'uyla adlandırır | `registrationId("keycloak")` açıkça verilir | Faz 0C'de gözlendi (S2 B5) |
+| Test kullanıcısı `mm` oluşturulamıyor: 400 `error-invalid-length` | Keycloak 26.8 user profile'ı kullanıcı adı için en az 3 karakter ister | Fixture yalnızca test realm'inde alt sınırı 2'ye indirir; üretim realm'ine taşınmaz | Faz 0C'de yaşandı (S2 B26) |
+| Çıkıştan sonra yeni giriş formsuz tamamlanıyor, tarayıcı `?logout` adresine dönüyor | Spring'in varsayılan çıkışı yalnızca uygulama oturumunu bitirir, Keycloak SSO oturumu yaşar | `OidcClientInitiatedLogoutSuccessHandler`; dönüş adresi `{baseUrl}` kökü | Faz 0C'de yaşandı (S2 B9) |
+| Keycloak yeni tenant host'unda `Invalid parameter: redirect_uri` (400) | `https://*.erp.test/*` gibi alt alan adı jokeri eşleşmez; `*` yalnızca yolun sonunda geçerlidir | Her tenant host'u `erp-web`'in redirect ve post-logout URI'lerine ayrıca eklenir (Faz 2 provisioning) | Faz 0C'de gözlendi; öğrenme testiyle sabit (S2 B18) |
+| Oturum çerezi taşıyan bearer isteği `Set-Cookie: __Host-SESSION=...` alıyor, `last_access_time` ilerliyor | `SessionCreationPolicy.STATELESS` Spring Session arkasında oturum okumayı engellemez | Bearer zincirinin ilk filtresi `SessionlessRequestFilter` | Faz 0C'de yaşandı (S2 B22); Bölüm 4.8 alıştırması |
+| Bearer ile bilinmeyen `/api` yolu 404 yerine 403 alıyor | `anyRequest().denyAll()` `/error` dispatch'ine de uygulanıyordu | Zincirin ilk kuralı `dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` | Faz 0C'de yaşandı (S2 B23, commit `bde87e6`) |
+| Geçersiz bearer token oturum çereziyle 200 alıyor | Bearer zinciri yokken istek tarayıcı zincirine düşüyordu | Zincir `Authorization: Bearer` başlığıyla eşleşir (`hasBearerToken`) | Faz 0C'de yaşandı (S2 B21) |
+| `gitleaks dir ... spikes docs` yerel `deploy/compose/.env`'yi bildiriyor | gitleaks 8.30.1'de `dir` tek yol alır | Her yol için ayrı `gitleaks dir` (Bölüm 8.5) | Faz 0C'de yaşandı; doğrulandı |
+| S2 testlerinde JDK `restricted header name` hatası (beklenen) | JDK HTTP istemcisi `Host` başlığını yasaklar | Surefire `argLine` `-Djdk.httpclient.allowRestrictedHeaders=host` (`spikes/s2-identity/pom.xml`) yerinde kalmalıdır | Beklenen; hata metni doğrulanmadı |
+| Test çıktısında `WARNING: A Java agent has been loaded dynamically` ve `Mockito is currently self-attaching ...` | Mockito kendini çalışma anında JDK 25'e agent olarak yükler | Uyarıdır, build'i kırmaz; repo genelinde Surefire `argLine` kararıdır | S1 ve S2 çıktısında doğrulandı (S2 B27) |
 
 ## 10. Henüz yok ve açık kararlar
 
@@ -1912,20 +2541,20 @@ void on(SampleRecorded event) {
 
 | Konu | Bugünkü durum | Nerede planlı |
 |---|---|---|
-| S2 kimlik spike'ı (BFF, Keycloak Organizations, CSRF, bearer zinciri) | Yok; Keycloak yalnızca dev yığınında boş çalışır | Plan 0C |
 | S3 metadata ve belge dilimi (YAML kaynak, AG Grid satır ızgarası, kesinleştirme) | Yok | Plan 0D |
-| Teyit listesi (Flyway/Liquibase lisansı, JasperReports + Java 25, springdoc, jOOQ ticari lisans), ADR durumlarının son denetimi, `spikes/` klasörünün silinmesi | Yok; S1 spike'ı `spikes/s1-tenancy/` altında duruyor | Plan 0E |
+| Teyit listesi (Flyway/Liquibase lisansı, JasperReports + Java 25, springdoc, jOOQ ticari lisans), ADR durumlarının son denetimi, `spikes/` klasörünün ve kök `pom.xml`'deki `spikes` profilinin silinmesi, plan çıkış kontrollerindeki `gitleaks dir` komutunun düzeltilmesi | Yok; S1 ve S2 spike'ları `spikes/` altında duruyor | Plan 0E |
 | İlk yeşil GitLab pipeline'ı, cosign anahtarları, Renovate botu | CI tanımı var, hiç çalışmadı | §20 soru 5, `docs/guides/ci.md` |
 | Kernel: BaseEntity, UUIDv7, `@Version`, Money/Quantity, Clock, ProblemDetail, TurkishText | Ürün kodunda yok; `TenantKey`, `TenantContext` ve `UuidV7`'nin deneme sürümleri yalnızca spike'ta. K10 kural mesajı `TurkishText.fold()`'u anar ama sınıf yoktur | Faz 1 (§15.3) |
 | ArchUnit kuralları K3, K5, K7, K13, K14; `@GeneratedValue`/`@SequenceGenerator` yasağı | Yok | Faz 1 |
 | Tek tenant'lı routing DataSource, `TenantContext`, açılış izolasyon testi | Ürün kodunda yok; spike'ta kanıtlandı, "Faz 1 için girdiler" listesi ve zorunlu yapılandırma `docs/spikes/s1-tenancy.md`'de | Faz 1 |
 | Migration orkestratörü, ürün Flyway kurulumu | Yok; spike'ta fixture Flyway API'siyle migration çalıştırıyor | Faz 2 (ADR-0038) |
-| Giriş (BFF) ve rol kontrolü | Yok; tüm uçlar kimliksiz açık | Faz 1, Faz 3 |
+| Giriş (BFF), oturum, CSRF, bearer zinciri | Ürün kodunda yok, tüm uçlar kimliksiz açık; S2 spike'ında kanıtlandı, yeniden yazılacak sınıflar, zincirler, kalite kapıları ve zorunlu yapılandırma `docs/spikes/s2-identity.md`, "Faz 1 için girdiler"de | Faz 1 |
+| Rol ve kapsam kontrolü, `user_account` kaydı, cihaz kimliği yolu (ADR-0040 yol 3), mobil kullanıcı token'ı, `/api/v1/bootstrap` | Yok | Faz 3 |
 | Metadata ve CRUD motoru | Yok | Faz 1 (v0), Faz 4 |
 | Router, Pinia, vee-validate + Zod, openapi-typescript/openapi-fetch, AG Grid, meta-renderer, modül paketleri | Yok | Faz 1 ve sonrası (§9) |
 | OpenAPI üretimi ve japicmp kırıcı değişiklik denetimi | Yok | §5.4, §8.7 |
 | Örnek tenant ve test verisi üretici | Ürün kodunda yok; spike fixture'ında dört test tenant'ı (Bölüm 3.8) | Faz 2 ve sonrası |
-| Compose `onprem` ve `monitoring` profilleri, `erpctl`, Caddy ile TLS, appliance imajı | Yok | Faz 7 (§11, §14) |
+| Compose `onprem` ve `monitoring` profilleri, `erpctl`, Caddy ile TLS, appliance imajı | Yok; S2'ye göre kurulum `internal-proxies` ayarını ve uygulama portunun dışarı açılmadığını denetlemelidir (S2 B17) | Faz 7 (§11, §14) |
 | §14'teki modül, paket, müşteri, araç, appliance ve runbook klasörleri | Açılmadı (boş klasör açılmaz) | İlk içerikleri geldiğinde |
 
 #### S1 spike'ından Faz 1'e kalan açık maddeler
@@ -1946,15 +2575,41 @@ void on(SampleRecorded event) {
 - Spring Modulith'e bildirilecek iki konu (`databaseType` bean'i için koşul ya da özellik; `DefaultEventPublicationRegistry#destroy()`'un DB'ye gitmemesi) henüz açılmamıştır; bulgu raporuna göre Faz 1 başlamadan açılacaktır.
 - Spec §6.12'deki "Olay iki kez teslim edilse bile iş bir kez planlanır" cümlesi, tekilleştirmenin iş satırı silinene kadar sürdüğü (B15) gerçeğiyle sınırlanmayı bekler. Mimari doküman onaylı kaynak olduğu için değişiklik proje sahibinin kararıdır.
 
+#### S2 spike'ından Faz 1'e kalan açık maddeler
+
+`docs/spikes/s2-identity.md`, "Faz 1'de kapatılacak açık maddeler" bölümünden. Spike'ın sonucunu değiştirmezler; Faz 1 planına girmeleri gerekir.
+
+| # | Madde | Faz 1'de yapılacak |
+|---|---|---|
+| 1 | Keycloak kesintisinde giriş whitelabel 500 ve ERROR yığını veriyor; discovery bir kilit altında 30 sn bağlantı ve 30 sn okuma zaman aşımıyla bekleyebiliyor (bytecode okuması, ölçülmedi; S2 B6) | 503 sayfası ve tek satırlık log; negatif önbellek ya da geri çekilme, tek uçuş, kısa zaman aşımı |
+| 2 | Kimliksiz oturum satırları platform DB'sinde birikiyor, temizlik yok (S2 B11, B12) | Süresi dolan oturumları silen db-scheduler işi; istek önbelleğinin kapsamı |
+| 3 | Bearer zincirinin kenarları (S2 B24) | Sıkı `Bearer` matcher'ı, `.logout(disable)`, `resource_metadata` |
+| 4 | Async dispatch'te tenant bağlamı yok (S2 B23) | Async uç nokta açılmadan tenant'ın async dispatch'e taşınması |
+| 5 | Boot `InMemoryOAuth2AuthorizedClientService` bean'ini yine kuruyor (S2 B8) | Bastırılır ya da boş kaldığı testle sabitlenir |
+| 6 | `IdentityProperties.toString` client secret'ı açık metinle içeriyor (S2 B27) | `toString` override ya da ayrı sır tipi |
+| 7 | İç uç noktalar (ör. Prometheus) tarayıcı zincirinden 404 alıyor (S2 B25) | Ayrı zincir |
+| 8 | Oturum serileştirmesi (S2 B13) | Kendi sınıflarda sabit `serialVersionUID`, gerekirse toleranslı deserializer |
+| 9 | Güvenilen proxy aralığı bütün özel ağlar (S2 B17) | `internal-proxies` Caddy'ye daraltılır, uygulama portu dışarı açılmaz |
+| 10 | Keycloak'ın dış ve iç adresi ayrışmıyor (S2 B17) | Compose'da issuer dış adres, discovery ve JWK erişimi iç adres |
+| 11 | Güvenlik olayları eksik loglanıyor (S2 B28) | Hangi olayların, nereye (platform DB'si ya da yapılandırılmış log), hangi oran sınırıyla yazılacağı |
+
+#### S2'den sonraki fazlara devredilenler
+
+- Faz 2: provisioning adaptörü (organization, sabit tenant iddialı ve `erp-api` audience'lı entegrasyon istemcisi, her tenant host'unun `erp-web` redirect ve post-logout URI'lerine kaydı ve silinmesi), host araması önbelleği (Caffeine + LISTEN/NOTIFY), `tenant_domain` şeması ve organization bağının `tenant`'ta durması, `TenantKey` ile DNS etiketi uyumu, istemci yapılandırmasının büyümesinin izlenmesi (S2 B11, B18–B21).
+- Faz 3: cihaz zinciri, mobil kullanıcı token'ı, `user_account` ve `sub` bağlama, organization'dan çıkarmada o tenant'ın oturumlarını silme, back-channel logout, oturumun mutlak ömrü, `/api/v1/bootstrap` ve bearer'daki durumu, tarayıcıda token olmadığını ve çerez özniteliklerini doğrulayan Playwright testi (S2 B9, B10, B16).
+- Faz 7: `/oauth2/authorization/*` ve kimliksiz sayfa istekleri için oran sınırı, kurulumda `internal-proxies` ve uygulama portu denetimi (S2 B11, B17).
+- İlk ayrı realm müşterisiyle: bearer'da `JwtIssuerAuthenticationManagerResolver` (güvenilen issuer'lar = `tenant.oidc_issuer`), tarayıcıda tenant'ın issuer'ına göre client registration ve çıkış uç noktası (S2 B4, ADR-0005 "Değişti").
+
 ### 10.2 Geliştirmeyi en çok etkileyen "Önerildi" ADR'ler
 
-44 ADR'den 39'u "Önerildi" durumundadır (`docs/adr/README.md`). Faz 0B'de ADR-0003, ADR-0012, ADR-0013, ADR-0014 ve ADR-0015 S1 sonucuyla "Kabul edildi" durumuna geçmiştir; bu yüzden aşağıdaki tablodan çıkarılmışlardır (Bölüm 11). Kod yazarken en çok bunlar etkiler:
+44 ADR'den 36'sı "Önerildi" durumundadır (`docs/adr/README.md`). Faz 0B'de ADR-0003, ADR-0012, ADR-0013, ADR-0014 ve ADR-0015, Faz 0C'de ADR-0006 ve ADR-0039 "Kabul edildi" durumuna geçmiştir. ADR-0005 Faz 0C'de "Değişti" durumuna geçmiştir: ayrı realm istisnasında çözümleyici değişmez ama güvenlik zincirleri tek issuer'a güvendiği için çoklu issuer yapılandırması gerekir (S2 B4). Bu ADR'ler aşağıdaki tablodan çıkarılmıştır (Bölüm 11). Kod yazarken en çok bunlar etkiler:
 
 | ADR | Karar | Neden önemli | Doğrulanacağı yer |
 |---|---|---|---|
 | ADR-0011 | Yazma JPA, okuma jOOQ; ticari jOOQ lisansı | Repository ve sorgu kalıpları | Yazma/okuma ayrımı S1'de doğrulandı; lisans kararı Plan 0E |
-| ADR-0004, ADR-0038 | Platform DB ayrımı; migration orkestratörü | Platform tabloları ve migration akışı | Faz 2 (platform DataSource düzeni S1'de denendi) |
-| ADR-0005, ADR-0006, ADR-0039, ADR-0040 | Keycloak Organizations, BFF + `__Host-` çerez, Spring Session JDBC, üç kimlik yolu | Her uç noktanın güvenlik ve tenant bağlamı | Plan 0C |
+| ADR-0004, ADR-0038 | Platform DB ayrımı; migration orkestratörü | Platform tabloları ve migration akışı | Faz 2 (platform DataSource düzeni S1'de, platform DB'sindeki oturum ve tenant kaydı S2'de denendi) |
+| ADR-0040 | Üç kimlik yolu, her biri ayrı `SecurityFilterChain` | Her uç noktanın güvenlik ve tenant bağlamı | Yol 1 ve 2 S2'de doğrulandı; yol 3 (cihaz) Faz 3 |
+| ADR-0024 | On-prem Linux + compose + `erpctl`; TLS Caddy'de | `forward-headers-strategy`, `internal-proxies`, uygulama portunun kapalılığı (S2 B17) | Faz 7 (S2 notu ADR'de) |
 | ADR-0007, ADR-0018, ADR-0034, ADR-0037 | Metadata YAML, belge durum eksenleri, satır modeli, ledger | İş modüllerinin şekli | Plan 0D |
 | ADR-0020, ADR-0021 | Vuetify 4 + `@erp/ui`; AG Grid Community | Önyüz bileşen katmanı | Plan 0D |
 | ADR-0028 | Monorepo, GitLab CI | CI sağlayıcısı | §20 soru 5 |
@@ -1975,6 +2630,16 @@ void on(SampleRecorded event) {
 | 13 | jOOQ ticari lisansı bütçelenecek mi (ADR-0011) | Faz 0 |
 
 Diğer sorular (4, 6, 8, 9, 10, 12) sonraki fazlara aittir.
+
+### 10.4 İnceleme kaynaklı açık sorular
+
+`docs/open-questions.md`, tasarım incelemelerinden doğan ve henüz karara bağlanmamış soruları tutar; karar verilen soru, kararın yazıldığı yere bağlantıyla birlikte oradan silinir. Faz 0C'de açılan 1 ve 5 numaralı sorular S2 sonrası spec'e işlenerek kapanmıştır (§4.3, §6.3.1; commit `4719795`). Açık kalanlar:
+
+| # | Soru | Güncel öneri | Ne zamana kadar |
+|---|---|---|---|
+| 2 | Önyükleme (`/api/v1/bootstrap`, §8.1) bearer istemcilere de açık mı? | Açık; bearer yanıtında CSRF alanları olmaz. Spike `/bootstrap`'ı tarayıcıya özel tutar | Faz 3 |
+| 3 | BFF oturumunun mutlak ömrü ne olacak, Keycloak'taki iptal oturuma nasıl yansıyacak? | ID token'ın `auth_time`'ı ile mutlak ömür; organization'dan çıkarmada principal index'iyle oturum silme; `sub`'a göre bulma ya da back-channel logout | Faz 3 |
+| 4 | Tenant'ı belirleyen başlık `X-Forwarded-Host` mı, yalnızca `Host` mu? | Boot varsayılanı kalır; `internal-proxies` Caddy'ye daraltılır, uygulama portu dışarı açılmaz | Faz 1 |
 
 ## 11. Faz geçmişi
 
@@ -2060,3 +2725,49 @@ Plan: `docs/superpowers/plans/2026-10-05-faz-0b-s1-tenancy.md`. Dal `feat/faz-0b
 - Bölüm 8: giriş, 8.3 (spike migration tarifi), 8.4 (spike'ı etkileyen sürümler), 8.5 (spike adımı, commit kapsamı `spike`); yeni 8.6 (tenant bağlamında yazma, olay ve iş zinciri).
 - Bölüm 9: Faz 0B'de yaşanan hatalar eklendi.
 - Bölüm 10: S1 satırı çıkarıldı; Faz 1 açık maddeleri, Faz 2'ye devredilenler ve bekleyen kararlar eklendi; 10.2'den kabul edilen ADR'ler çıkarıldı.
+
+### Faz 0C — S2 kimlik spike'ı (2026-10-06 – 2026-10-10)
+
+Plan: `docs/superpowers/plans/2026-10-06-faz-0c-s2-kimlik.md`. Dal `feat/faz-0c-s2-kimlik`, `main`'in `e8d84c8` commit'inden açılmıştır. Faz commit'leri `7ceff7c` (plan) ile `7fc7be8` arasındadır (ikisi dahil 13 commit) ve merge commit `14f239b` ile `main`'e alınmıştır. Spec düzeltmeleri `docs/s2-spec-duzeltmeleri` dalındaki `4719795` commit'iyle gelmiş, merge commit `6187a6e` ile alınmıştır. Spike sonuç raporu: `docs/spikes/s2-identity.md`.
+
+**Eklenenler**
+
+- Spike: `spikes/s2-identity/` (`erp-spike-s2-identity`), dört Modulith modülü (`kernel`, `tenancy`, `identity`, `sample`), iki platform migration'ı, Keycloak test realm'i, 127 test; `spikes/README.md`'ye S2 satırı.
+- Build: kök `pom.xml`'deki `spikes` profiline `spikes/s2-identity` eklendi; ürün reaktörü değişmedi. Yeni üçüncü taraf bağımlılık yoktur: eklenen starter'lar Boot 4.1.1 BOM'undandır (plan 0C, "Global Constraints").
+- Kurallar ve kapılar (yalnızca `-Pspikes`): açılış ve çalışma boyunca tenant DataSource izolasyonu, oturum transaction kancasının kablolaması, giriş iddia kontrolü, host ile oturum kontrolü, bearer zincirinin oturuma dokunmaması, CSRF, Keycloak'sız açılış, spike'ın kendi K1, K10 ve K12 testleri (Bölüm 4.8). Ürün build'ine yeni kural eklenmedi.
+- Araçlar: kılavuz denetimi betiği `scripts/check-guide.mjs` ve `scripts/check-guide.allow` (commit `e8d84c8`, faz dalı açılmadan önce `main`'e); Boot 4.1.1'in yönettiği Spring Security 7.1.1 ve Spring Session 4.1.1 ile Keycloak 26.8.0 konteyneri spike'ta ilk kez kullanıldı.
+- Uçlar: ürün uygulamasına yeni uç eklenmedi. Spike'ta `GET /`, `GET /bootstrap`, `GET /api/whoami`, `POST /api/echo`, Spring Security'nin giriş (`/oauth2/authorization/keycloak`, `/login/oauth2/code/keycloak`) ve çıkış (`POST /logout`) uçları ile `/actuator/health/**` vardır.
+- Dokümanlar: `docs/spikes/s2-identity.md` (kanıt tablosu, B1–B28, Faz 1 girdileri ve 11 açık madde), `docs/open-questions.md`.
+
+**ADR'ler ve spike'lar**
+
+- S2 spike'ı yapıldı; kanıt tablosundaki on iddianın hepsi otomatik testlerle kanıtlandı. Öğrenme testleri yazıldığı gibi geçti; fixture'daki tek sapma test kullanıcısı `mm`'nin Keycloak'ın kullanıcı adı alt sınırına takılmasıdır (S2 B26).
+- "Kabul edildi" durumuna geçenler: ADR-0006 (BFF + `__Host-` oturum çerezi; tarayıcıda token yok), ADR-0039 (Spring Session JDBC, platform DB). `docs/adr/README.md` dizini güncellendi.
+- "Değişti" durumuna geçen: ADR-0005. İstisna maddesindeki "kod değişmez" cümlesi doğru değildir: çözümleyici değişmez, ama ayrı realm için bearer ve tarayıcı zincirleri çoklu issuer'a göre yapılandırılmalıdır (S2 B4).
+- "Önerildi" kalıp S2 notu alanlar: ADR-0040 (yol 1 ve 2 doğrulandı, yol 3 Faz 3'te), ADR-0004 (organization bağı `tenant`'ta, oturumlar platform DB'sinde), ADR-0024 (`forward-headers-strategy: native`, `internal-proxies`'in daraltılması).
+- Spec'e işlenen düzeltmeler (commit `4719795`): §4.3'te Keycloak bağı `tenant` satırına taşındı, `tenant_domain` yalnızca host eşlemesi oldu (S2 B19); §6.3.1 "İstisna" satırı ADR-0005'e göre düzeltildi (S2 B4). `docs/open-questions.md`'deki 1 ve 5 numaralı sorular kapandı.
+- Kararlara etkisi: Faz 1 kimlik katmanı rapordaki "Faz 1 için girdiler"e göre yeniden yazılacak: üç zincir (actuator 0, bearer 1, tarayıcı 2), ID token'da `iss` ve tam organization kümesi kontrolü, Spring Session'a platform DB üzerinde varsayılan aday olmayan transaction kancası, bearer zincirinde oturumun istekten gizlenmesi, zorunlu yapılandırma bloğu; 11 açık madde Faz 1 planına girer (Bölüm 10.1).
+
+**Faz içinde davranışı değişenler ve geliştiriciye etkisi**
+
+| Commit | Değişiklik | Geliştiriciye etkisi |
+|---|---|---|
+| `67cc7f8` | Plan Spring Security 7.1.1 ve Spring Session 4.1.1'e göre gözden geçirildi: transaction kancası varsayılan aday olmayan `springSessionTransactionOperations` bean'i oldu, PKCE kayıttan alındı, callback tekrarına karşı tek savunmanın iddia kontrolü olduğu yazıldı, `docs/open-questions.md` açıldı | Faz 1'de aynı tuzaklar (S2 B5, B7) baştan bilinir |
+| `3a388ed` | Çıkış testi Keycloak'ın çıkışını izleyip yeni girişte formu bekleyecek şekilde düzeltildi (eski test SSO'nun bittiğini kanıtlamıyordu) | Çıkışın Keycloak SSO'sunu bitirdiği testle korunur |
+| `bde87e6` | Bearer zinciri hata dispatch'ine izin verir; `SessionlessRequestFilter` her dispatch tipinde çalışır | Bilinmeyen `/api` yolu bearer'da 404 alır, `/error` dispatch'i oturuma dokunmaz (S2 B23) |
+| `c18bc2f`, `7fc7be8` | Raporda kaynak ve bytecode okumasına dayanan iddialar işaretlendi; güvenlik olayı loglaması (S2 B28) ve ID token istisnasının sınırları (S2 B9) eklendi | Rapordaki her iddianın kanıt türü ayırt edilir; açık madde 11 Faz 1'e girer |
+| `4719795` | Spec §4.3 ve §6.3.1 düzeltildi | Platform tablosu tasarımı organization bağını `tenant`'ta tutar |
+
+**Kılavuzda güncellenen bölümler**
+
+- Giriş: doğrulama notu, kaynak listesine plan 0C.
+- Bölüm 1: giriş (S2 spike'ı, ADR durumları, bulgu numaralarının öneki), 1.2 (S2 modülleri), 1.3 (CSRF ve aynı origin), 1.4 ve 1.5 (yolun değişmediği notu); yeni 1.6 (kimlikli bir isteğin yolculuğu, zincir tablosu ve giriş akışı).
+- Bölüm 2: 2.1 (`spikes` profili, kılavuz denetimi betiği), 2.4 (S2 raporu, açık sorular, plan 0C, Git'e girmeyen yollar), 2.5 Maven diyagramı, 2.6 (S2 dosyaları ve ayarları).
+- Bölüm 3: 3.3 (Keycloak notu), 3.4 (süre, 8080 notu), 3.8 (S2 test tenant'ları, kullanıcıları ve istemcileri); 3.10 "Spike'ları çalıştırma" olarak genişletildi.
+- Bölüm 4: 4.1 notu, 4.2'ye kılavuz denetimi, 4.3'e S2'nin önerdiği Faz 1 kapıları; yeni 4.8 (S2 kapıları ve beş alıştırma).
+- Bölüm 5: 5.1, 5.3 (gitleaks commit sayısı, spike'lar CI'da yok), 5.4 (süre), 5.5 (S2 migration'ları).
+- Bölüm 6: 6.2 Keycloak satırı, 6.3'e Plan 0C Review Focus tablosu; yeni 6.5 (kimliğe bağlı hata durumları).
+- Bölüm 7: giriş, 7.2 (kullananlar); yeni 7.12–7.15 (S2 modülleri, sınıf, akış ve ER diyagramları).
+- Bölüm 8: giriş, 8.3 (S2 migration'ları), 8.4 (Spring Security, Spring Session ve Keycloak sürümleri), 8.5 (S2 adımı, kılavuz denetimi, `gitleaks dir`); yeni 8.7 (kimlik zincirlerinin arkasına uç nokta).
+- Bölüm 9: Faz 0C'de yaşanan hatalar eklendi.
+- Bölüm 10: S2 satırı çıkarıldı; kimlik satırları ve teyit listesi güncellendi; S2'nin Faz 1 açık maddeleri ve sonraki fazlara devredilenler eklendi; 10.2'den ADR-0005, ADR-0006 ve ADR-0039 çıkarıldı, ADR-0040 ve ADR-0024 satırları eklendi; yeni 10.4 (`docs/open-questions.md`).

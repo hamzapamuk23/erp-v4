@@ -5,7 +5,7 @@
 | **Kapsam** | v4-platform.md §15.3 S2: Keycloak 26.8 Organizations ile BFF girişi; tenant'ın alt alan adından seçilmesi ve token'daki `organization` iddiasının host'un tenant'ına karşı zorlanması; oturumun `(kullanıcı, tenant)` çiftine bağlanması ve Spring Session JDBC ile platform DB'sinde tutulması; kardeş alt alan adlarına (başka tenant'lara) karşı CSRF; tenant'ı sabit iddiadan çözen bearer zinciri |
 | **Kod** | `spikes/s2-identity/` (commit `bde87e6`), Faz 0 kapanışında (plan 0E) silinir |
 | **Çalıştırma** | `./mvnw -q install -DskipTests && ./mvnw -Pspikes -pl spikes/s2-identity verify` (Docker gerekir; ilk çalıştırma `quay.io/keycloak/keycloak:26.8.0` imajını çeker) |
-| **Sonuç** | 127 test yeşil (`bde87e6`, 2026-10-10). Doküman kararları ayakta; bir ADR kararı değişti (ayrı realm istisnası, B4, ADR-0005 **Değişti**) ve spec için iki düzeltme önerisi var (§6.3.1 B4, §4.3 B19). Uygulama kuralları aşağıda. |
+| **Sonuç** | 127 test yeşil (`bde87e6`, 2026-10-10). Doküman kararları ayakta; bir ADR kararı değişti (ayrı realm istisnası, B4, ADR-0005 **Değişti**) ve spec'e iki düzeltme işlendi (§6.3.1 B4, §4.3 B19). Uygulama kuralları aşağıda. |
 | **İlgili ADR'ler** | 0005, 0006, 0039, 0040; notla 0004, 0024 |
 
 ## Kapsam dışı
@@ -93,7 +93,7 @@ Görev incelemeleri bir kanıt açığı ve bir davranış hatası buldu; ikisi 
 
 **B18 — Redirect URI'lerinde alt alan adı jokeri yoktur.** Keycloak `https://*.erp.test/*` redirect URI'sini oluşturmada kabul etti (201) ama yeni bir tenant host'unu (`https://newco.erp.test/callback`) eşleştirmedi (400, `Invalid parameter: redirect_uri`): `*` sadece yolun sonunda eşleşir. Admin API'nin yanlış bir jokeri reddetmesine güvenilemez. Post-logout URI'leri `post.logout.redirect.uris: "+"` ile redirect URI'lerini izler; kayıtsız hedef 400 (gözlem). Karar: Faz 2 provisioning her tenant host'unu `erp-web`'in redirect ve post-logout URI'lerine ekler, host ya da tenant silinince çıkarır. Yüzlerce tenant'ta tek istemcinin URI listesi büyür; Keycloak'taki etkisi bir izleme konusudur (ölçülmedi). Kanıt: `KeycloakOrganizationsLearningTests#subdomainWildcardRedirectUriDoesNotCoverANewTenant`.
 
-**B19 — Organization bağı `tenant` tablosundadır (Tasarım kararı 2).** §4.3 bağı `tenant_domain`'a koyar ("alt alan adları ↔ tenant ↔ Keycloak organization"). Bir tenant'ın birden çok host'u olabilir ve bearer isteğinin anlamlı bir host'u yoktur; spike bağı `tenant(oidc_issuer, organization_alias)`'a koydu (`(oidc_issuer, organization_alias)` tekil), `tenant_domain(host → tenant_key)` sadece host eşlemesidir. Tarayıcı host'tan, bearer `(iss, organization)`'dan aynı kayda ulaşır; nötr `api.erp.test` host'unda tenant'ı token belirler. Doküman önerisi aşağıda ([açık soru 1](../open-questions.md)). Kanıt: `JdbcTenantDirectoryTests`, `BearerChainTests#integrationClientIsServedInItsTenant`.
+**B19 — Organization bağı `tenant` tablosundadır (Tasarım kararı 2).** §4.3 bağı `tenant_domain`'a koyuyordu ("alt alan adları ↔ tenant ↔ Keycloak organization"). Bir tenant'ın birden çok host'u olabilir ve bearer isteğinin anlamlı bir host'u yoktur; spike bağı `tenant(oidc_issuer, organization_alias)`'a koydu (`(oidc_issuer, organization_alias)` tekil), `tenant_domain(host → tenant_key)` sadece host eşlemesidir. Tarayıcı host'tan, bearer `(iss, organization)`'dan aynı kayda ulaşır; nötr `api.erp.test` host'unda tenant'ı token belirler. §4.3 buna göre düzeltildi (aşağıda). Kanıt: `JdbcTenantDirectoryTests`, `BearerChainTests#integrationClientIsServedInItsTenant`.
 
 **B20 — `TenantKey` `_` içerebilir, DNS etiketi içeremez.** S1'in `TenantKey` kuralı (`^[a-z][a-z0-9_]{1,29}$`) `_`'a izin verir; `TenantHost` `_` içeren host'u reddeder (`acme_tr.erp.test` → host yok). Organization alias'ı `_`'ı kabul eder (`acme_tr` → 201), yani Keycloak tarafı engel değildir. Host anahtardan türetilirse `acme_tr` tenant'ının host'u olamaz. Karar Faz 2'de: ya `TenantKey`'den `_` çıkar ya da host anahtardan türetilmez (`tenant_domain` zaten ayrı bir eşlemedir). `TenantKey` daralırsa oturumdaki eski anahtarlar okunamaz (B13). Kanıt: `TenantHostTests`, `KeycloakOrganizationsLearningTests#organizationAliasAcceptsTheTenantKeyFormat`.
 
@@ -174,9 +174,9 @@ Cihaz zinciri (ADR-0040 yol 3); mobil kullanıcı token'ı (public client + PKCE
 
 Plan 0C'nin ve S1 planının çıkış kontrolündeki `gitleaks dir --config .gitleaks.toml --redact spikes docs` komutu hatalıdır: gitleaks 8.30.1'de `dir` tek yol alır; iki yolla çalışma ağacının tamamını taradı ve git'in yok saydığı yerel `deploy/compose/.env`'yi bildirdi. Kontrol her yol için ayrı bir `gitleaks dir` çağrısıyla yapılır.
 
-## v4-platform.md için öneriler
+## v4-platform.md'ye işlenen düzeltmeler
 
-Bu doküman spec'i değiştirmez; öneriler spec sahibinin onayıyla işlenir.
+S2 sonrası spec'e işlendi (2026-10-10); ilgili açık sorular (1 ve 5) kapandı.
 
-- **§4.3:** `tenant` satırına "OIDC issuer ve organization alias'ı (`(issuer, alias)` tekil)" eklenir; `tenant_domain` satırı "alt alan adları (`acme.erp.com`) → tenant" olur (B19, [açık soru 1](../open-questions.md)).
-- **§6.3.1 "İstisna" satırı:** "Tenant çözümleyici `(issuer, organization) → tenant` eşlemesini kullandığı için kod değişmez" yerine "çözümleyici değişmez; bearer ve tarayıcı zincirleri çoklu issuer'a göre yapılandırılır" (B4, ADR-0005, [açık soru 5](../open-questions.md)).
+- **§4.3:** `tenant` satırı Keycloak bağını taşır (`oidc_issuer`, `organization_alias`; ikisi birlikte tekil); `tenant_domain` sadece host eşlemesidir (B19).
+- **§6.3.1 "İstisna" satırı:** "kod değişmez" yerine: çözümleyici değişmez, bearer ve tarayıcı zincirleri ayrı realm için çoklu issuer'a göre yapılandırılır (B4, ADR-0005).

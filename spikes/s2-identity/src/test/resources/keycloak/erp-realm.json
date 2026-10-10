@@ -1,0 +1,89 @@
+{
+  "realm": "erp",
+  "enabled": true,
+  "organizationsEnabled": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "erp-web",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["https://acme.erp.test/*", "https://globex.erp.test/*", "https://initech.erp.test/*"],
+      "attributes": {"pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+"}
+    },
+    {
+      "clientId": "acme-integration",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {"name": "erp-api-audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.custom.audience": "erp-api", "access.token.claim": "true"}},
+        {"name": "tenant", "protocol": "openid-connect", "protocolMapper": "oidc-hardcoded-claim-mapper",
+         "config": {"claim.name": "organization", "claim.value": "[\"acme\"]", "jsonType.label": "JSON",
+                    "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "initech-integration",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {"name": "erp-api-audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.custom.audience": "erp-api", "access.token.claim": "true"}},
+        {"name": "tenant", "protocol": "openid-connect", "protocolMapper": "oidc-hardcoded-claim-mapper",
+         "config": {"claim.name": "organization", "claim.value": "[\"initech\"]", "jsonType.label": "JSON",
+                    "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "multi-integration",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {"name": "erp-api-audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.custom.audience": "erp-api", "access.token.claim": "true"}},
+        {"name": "tenant", "protocol": "openid-connect", "protocolMapper": "oidc-hardcoded-claim-mapper",
+         "config": {"claim.name": "organization", "claim.value": "[\"acme\",\"globex\"]", "jsonType.label": "JSON",
+                    "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "unknown-integration",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {"name": "erp-api-audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.custom.audience": "erp-api", "access.token.claim": "true"}},
+        {"name": "tenant", "protocol": "openid-connect", "protocolMapper": "oidc-hardcoded-claim-mapper",
+         "config": {"claim.name": "organization", "claim.value": "[\"hooli\"]", "jsonType.label": "JSON",
+                    "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "noorg-integration",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {"name": "erp-api-audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.custom.audience": "erp-api", "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "noaud-integration",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {"name": "tenant", "protocol": "openid-connect", "protocolMapper": "oidc-hardcoded-claim-mapper",
+         "config": {"claim.name": "organization", "claim.value": "[\"acme\"]", "jsonType.label": "JSON",
+                    "access.token.claim": "true"}}
+      ]
+    }
+  ]
+}

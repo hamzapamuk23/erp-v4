@@ -26,8 +26,8 @@ Kararların gerekçesi; süreç: [CONTRIBUTING.md](../../CONTRIBUTING.md). Karar
 | [ADR-0002](0002-tek-imaj-saas-onprem.md) | Tek imaj ve tek kod tabanı: SaaS + on-prem | Önerildi | Tek yön |
 | [ADR-0003](0003-tenant-basina-veritabani.md) | Tenant başına veritabanı | Kabul edildi | Tek yön |
 | [ADR-0004](0004-platform-veritabani.md) | Platform DB ayrımı | Önerildi | Pahalı |
-| [ADR-0005](0005-keycloak-organizations.md) | Keycloak 26.8, tek iş realm'i + Organizations | Önerildi | Pahalı |
-| [ADR-0006](0006-bff-oturum-cerezi.md) | BFF + `__Host-` oturum çerezi; tarayıcıda token yok | Önerildi | Pahalı |
+| [ADR-0005](0005-keycloak-organizations.md) | Keycloak 26.8, tek iş realm'i + Organizations | Değişti | Pahalı |
+| [ADR-0006](0006-bff-oturum-cerezi.md) | BFF + `__Host-` oturum çerezi; tarayıcıda token yok | Kabul edildi | Pahalı |
 | [ADR-0007](0007-metadata-yaml-overlay.md) | Metadata: deklaratif YAML + Java davranış, overlay'ler DB'de | Önerildi | Tek yön |
 | [ADR-0008](0008-ozel-alanlar-ext-jsonb.md) | Özel alanlar: `ext jsonb` + isteğe bağlı ifade index'i | Önerildi | Pahalı |
 | [ADR-0009](0009-moduller-arasi-fk-ve-viewlar.md) | Modüller arası FK ve yayınlanmış view kuralları | Önerildi | Pahalı |
@@ -60,7 +60,7 @@ Kararların gerekçesi; süreç: [CONTRIBUTING.md](../../CONTRIBUTING.md). Karar
 | [ADR-0036](0036-analitik-boyutlar.md) | Analitik boyut seti | Önerildi | Pahalı |
 | [ADR-0037](0037-ledger-taahhut-defteri.md) | Ledger sözleşmesi + taahhüt defteri | Önerildi | Pahalı |
 | [ADR-0038](0038-migration-orkestratoru.md) | Migration orkestratörü, şema sürüm aralığı, `outOfOrder` kapalı | Önerildi | Pahalı |
-| [ADR-0039](0039-spring-session-jdbc.md) | Oturum deposu: Spring Session JDBC (platform DB) | Önerildi | Kolay |
+| [ADR-0039](0039-spring-session-jdbc.md) | Oturum deposu: Spring Session JDBC (platform DB) | Kabul edildi | Kolay |
 | [ADR-0040](0040-uc-kimlik-yolu.md) | Üç kimlik yolu | Önerildi | Pahalı |
 | [ADR-0041](0041-kuresel-referans-veriler.md) | Küresel referans veriler platform DB'sinde | Önerildi | Pahalı |
 | [ADR-0042](0042-personel-realm-impersonation.md) | Personel realm'i, step-up ve audit'li impersonation | Önerildi | Kolay |

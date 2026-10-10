@@ -35,3 +35,5 @@ On-prem kurulum ve güncelleme dakikalar sürmeli ve uzman gerektirmemeli; temiz
 ## Doğrulama
 
 Faz 7 çıkış kriteri: temiz bir Linux makinede kurulum ≤ 30 dakika sürüyor; Windows Server üzerinde appliance VM ile kurulum doğrulandı (bu yaklaşım gerçek bir müşteri ortamında doğrulanır, §11.1).
+
+**S2 sonucu (2026-10-10, `bde87e6`):** Not: TLS Caddy'de biter. Uygulama isteğin `https` olduğunu (`{baseUrl}`'den üretilen `redirect_uri` ve çıkış dönüş adresi) `X-Forwarded-Proto`'dan, tenant'ı belirleyen host'u `X-Forwarded-Host`'tan Tomcat `RemoteIpValve` üzerinden öğrenir (`server.forward-headers-strategy: native`); `__Host-` + `Secure` çerezi tarayıcıda ancak HTTPS origin'de kabul edilir. Boot varsayılanında güvenilen aralık bütün özel ağlardır ve tenant `X-Forwarded-Host`'u izler; on-prem LAN'daki her makine güvenilen proxy sayılır. Bu yüzden üretimde `internal-proxies` Caddy'ye daraltılır ve uygulama portu dışarı açılmaz. Keycloak'ın dış ve iç adresinin ayrışması (uygulama iç adresle gider, issuer dış adrestir) S2'de doğrulanmadı (Faz 1 compose). Faz 7 çıkış kriteri geçerliliğini korur. Ayrıntı: [docs/spikes/s2-identity.md](../spikes/s2-identity.md) B17.

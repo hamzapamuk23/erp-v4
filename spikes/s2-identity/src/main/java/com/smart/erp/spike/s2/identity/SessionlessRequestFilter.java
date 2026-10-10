@@ -15,10 +15,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * stops Spring Security from using the session for the security context; behind Spring Session, anything else that
  * asks the request for its session ({@code getSession(false)}) loads the session of whatever cookie the caller sends,
  * refreshes its idle timeout and may rotate its id: the authentication details, the session fixation strategy, Spring
- * MVC's flash map manager and its request-handled event all do. Here the request has no session, and a call that would
- * make one fails instead.
+ * MVC's flash map manager and its request-handled event all do. Here the request has no session, in every dispatch
+ * (request, error, async), and a call that would make one fails instead.
  */
 final class SessionlessRequestFilter extends OncePerRequestFilter {
+
+    /** The /error dispatch re-enters the chain with the container's own request: it needs hiding too. */
+    @Override
+    protected boolean shouldNotFilterErrorDispatch() {
+        return false;
+    }
+
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)

@@ -57,6 +57,8 @@ class SecurityConfiguration {
     SecurityFilterChain bearerChain(HttpSecurity http, TenantDirectory tenants) throws Exception {
         return http.securityMatcher(SecurityConfiguration::hasBearerToken)
                 .authorizeHttpRequests(authorize -> authorize
+                        .dispatcherTypeMatchers(DispatcherType.ERROR)
+                        .permitAll()
                         .requestMatchers("/api/**")
                         .authenticated()
                         .anyRequest()

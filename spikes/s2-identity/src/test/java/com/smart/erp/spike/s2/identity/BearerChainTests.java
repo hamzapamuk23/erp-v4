@@ -196,6 +196,25 @@ class BearerChainTests {
                 .isGreaterThan(accessedBefore);
     }
 
+    /**
+     * Spring MVC's 404 is an ERROR dispatch to /error, which runs the bearer chain a second time. It must pass (the
+     * browser chain permits it too), and it must not see the session either.
+     */
+    @Test
+    void errorDispatchIsServedWithoutTheSession() {
+        SpikeBrowser browser = new SpikeBrowser(port);
+        browser.login(ACME, "ayse");
+        String sessionId = browser.sessionId(ACME).orElseThrow();
+        long accessedBefore = lastAccess(sessionId);
+
+        SpikeBrowser.Page page =
+                get(browser, "https://" + ACME + "/api/nope", SpikeKeycloak.clientCredentials("acme-integration"));
+
+        assertThat(page.status()).isEqualTo(404);
+        assertThat(page.headers().allValues("Set-Cookie")).as("Set-Cookie").isEmpty();
+        assertThat(lastAccess(sessionId)).as("the session was not read").isEqualTo(accessedBefore);
+    }
+
     @Test
     void bootstrapIsNotABearerEndpoint() {
         SpikeBrowser.Page page = get(

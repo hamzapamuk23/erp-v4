@@ -28,3 +28,6 @@ deploy/compose/smoke-logs/
 
 # Research dumps may contain secrets leaked from v1 (doc Ek B). Never commit.
 docs/architecture/_research/
+
+# Guide PDF is generated from gelistirici-kilavuzu.md by DocBuilder.
+docs/guides/gelistirici-kilavuzu.pdf
